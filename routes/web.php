@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Permanent redirect from old /grounds/ URLs so existing bookmarks don't 404.
+Route::get('/grounds/{slug}', fn ($slug) => redirect("/facilities/{$slug}", 301));
+Route::get('/grounds/{slug}/availability', fn ($slug) => redirect("/facilities/{$slug}/availability", 301));
+
 Route::get('/facilities/{resource:slug}', [BookingController::class, 'show'])->name('facilities.show');
 Route::get('/facilities/{resource:slug}/availability', [BookingController::class, 'availability'])->name('facilities.availability');
 Route::post('/facilities/{resource:slug}/bookings', [BookingController::class, 'store'])->name('bookings.store');

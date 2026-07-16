@@ -92,9 +92,8 @@ class BookingController extends Controller
             ->firstOrFail();
 
         return Inertia::render('Public/BookingConfirmation', [
-            'booking'         => $booking,
-            'bank'            => config('booking.bank'),
-            'whatsappNumber'  => config('booking.whatsapp_number'),
+            'booking' => $booking,
+            'bank'    => config('booking.bank'),
         ]);
     }
 }

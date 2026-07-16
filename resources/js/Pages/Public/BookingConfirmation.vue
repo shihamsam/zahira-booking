@@ -3,9 +3,8 @@ import PublicLayout from '@/Layouts/PublicLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 
 const props = defineProps({
-    booking:        { type: Object, required: true },
-    bank:           { type: Object, required: true },
-    whatsappNumber: { type: String, required: true },
+    booking: { type: Object, required: true },
+    bank:    { type: Object, required: true },
 });
 
 const SLOT_LABELS = {
