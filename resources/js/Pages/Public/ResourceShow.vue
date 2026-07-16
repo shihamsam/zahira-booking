@@ -124,7 +124,7 @@ function onReceiptChange(e) {
 // ── Submit ────────────────────────────────────────────────────────────────────
 
 function submit() {
-    form.post(`/grounds/${props.resource.slug}/bookings`, {
+    form.post(`/facilities/${props.resource.slug}/bookings`, {
         forceFormData: true,
     });
 }

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BookingCancelled;
+use App\Mail\BookingConfirmed;
+use App\Mail\BookingRejected;
 use App\Models\Booking;
 use App\Models\Resource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -80,6 +84,10 @@ class BookingController extends Controller
             'confirmed_at' => now(),
         ]);
 
+        if ($booking->email) {
+            Mail::to($booking->email)->send(new BookingConfirmed($booking->load('resource', 'dates')));
+        }
+
         return back()->with('success', 'Booking confirmed.');
     }
 
@@ -100,6 +108,10 @@ class BookingController extends Controller
             'cancellation_reason' => $validated['reason'],
         ]);
 
+        if ($booking->email) {
+            Mail::to($booking->email)->send(new BookingCancelled($booking->load('resource', 'dates')));
+        }
+
         return back()->with('success', 'Booking cancelled. Its dates are now free again.');
     }
 
@@ -119,6 +131,10 @@ class BookingController extends Controller
             'rejected_at'      => now(),
             'rejection_reason' => $validated['reason'],
         ]);
+
+        if ($booking->email) {
+            Mail::to($booking->email)->send(new BookingRejected($booking->load('resource', 'dates')));
+        }
 
         return back()->with('success', 'Booking rejected. Its dates are now free again.');
     }

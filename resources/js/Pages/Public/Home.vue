@@ -11,13 +11,13 @@ defineProps({
     <PublicLayout>
         <section class="bg-pitch-900 text-chalk-50">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
-                <p class="font-mono text-floodlight-500 text-xs tracking-widest uppercase mb-3">Book a ground &middot; Kick off in minutes</p>
+                <p class="font-mono text-floodlight-500 text-xs tracking-widest uppercase mb-3">Book a facility &middot; Reserve in minutes</p>
                 <h1 class="font-display font-bold text-3xl sm:text-5xl leading-tight max-w-2xl">
-                    Reserve Zahira's grounds for your next match, practice or event.
+                    Reserve Zahira's facilities for your next match, event or function.
                 </h1>
                 <p class="mt-4 text-chalk-50/70 max-w-xl">
-                    Pick your dates, submit your details, and settle payment by bank deposit &mdash;
-                    we'll confirm your slot as soon as the receipt is verified.
+                    Choose a facility, pick your dates, upload your payment receipt &mdash;
+                    we'll confirm your booking as soon as it's verified.
                 </p>
             </div>
         </section>
@@ -29,7 +29,7 @@ defineProps({
                 <Link
                     v-for="resource in resources"
                     :key="resource.id"
-                    :href="`/grounds/${resource.slug}`"
+                    :href="`/facilities/${resource.slug}`"
                     class="card p-5 hover:shadow-md transition-shadow group"
                 >
                     <div class="flex items-start justify-between mb-3">
@@ -47,7 +47,7 @@ defineProps({
             </div>
 
             <p v-if="resources.length === 0" class="text-ink-700/60 text-sm">
-                No grounds are open for booking right now. Please check back later.
+                No facilities are open for booking right now. Please check back later.
             </p>
         </section>
     </PublicLayout>

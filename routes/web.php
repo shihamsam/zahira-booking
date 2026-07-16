@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-Route::get('/grounds/{resource:slug}', [BookingController::class, 'show'])->name('grounds.show');
-Route::get('/grounds/{resource:slug}/availability', [BookingController::class, 'availability'])->name('grounds.availability');
-Route::post('/grounds/{resource:slug}/bookings', [BookingController::class, 'store'])->name('bookings.store');
+Route::get('/facilities/{resource:slug}', [BookingController::class, 'show'])->name('facilities.show');
+Route::get('/facilities/{resource:slug}/availability', [BookingController::class, 'availability'])->name('facilities.availability');
+Route::post('/facilities/{resource:slug}/bookings', [BookingController::class, 'store'])->name('bookings.store');
 Route::get('/bookings/{referenceNo}/confirmation', [BookingController::class, 'confirmation'])->name('bookings.confirmation');
 
 /*
