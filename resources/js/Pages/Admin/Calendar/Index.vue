@@ -1,5 +1,6 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 
@@ -11,6 +12,14 @@ const props = defineProps({
     nextWeek:  { type: String, required: true },
     resources: { type: Array,  default: () => [] },
 });
+
+// Keep the date picker in sync when the user navigates via Prev / Next / Today.
+const pickedDate = ref(props.weekStart);
+watch(() => props.weekStart, val => { pickedDate.value = val; });
+
+function jumpToDate() {
+    if (pickedDate.value) nav(pickedDate.value);
+}
 
 const SLOT_SHORT = {
     full_day:     'Full day',
@@ -44,7 +53,15 @@ function fmtRange(start, end) {
                 Calendar
                 <span class="font-normal text-base text-ink-700/60 ml-2">{{ fmtRange(weekStart, weekEnd) }}</span>
             </h1>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Date picker — jump to any week instantly -->
+                <input
+                    v-model="pickedDate"
+                    type="date"
+                    @change="jumpToDate"
+                    class="field-input text-sm py-1.5"
+                    title="Jump to week"
+                />
                 <button @click="nav(prevWeek)" class="btn-outline text-xs px-3 py-1.5">&larr; Prev</button>
                 <button @click="today()" class="btn-outline text-xs px-3 py-1.5">Today</button>
                 <button @click="nav(nextWeek)" class="btn-outline text-xs px-3 py-1.5">Next &rarr;</button>
