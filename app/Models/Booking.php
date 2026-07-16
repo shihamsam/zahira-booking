@@ -16,7 +16,15 @@ class Booking extends Model
         'resource_id',
         'full_name',
         'mobile_number',
+        'nic',
+        'email',
         'purpose',
+        'slot_type',
+        'start_time',
+        'end_time',
+        'hours',
+        'chair_count',
+        'sound_system_requested',
         'total_amount',
         'status',
         'receipt_path',
@@ -25,15 +33,20 @@ class Booking extends Model
         'cancelled_by',
         'cancelled_at',
         'cancellation_reason',
+        'rejected_by',
+        'rejected_at',
+        'rejection_reason',
         'admin_notes',
     ];
 
     protected function casts(): array
     {
         return [
-            'total_amount' => 'decimal:2',
-            'confirmed_at' => 'datetime',
-            'cancelled_at' => 'datetime',
+            'total_amount'             => 'decimal:2',
+            'confirmed_at'             => 'datetime',
+            'cancelled_at'             => 'datetime',
+            'rejected_at'              => 'datetime',
+            'sound_system_requested'   => 'boolean',
         ];
     }
 
@@ -57,6 +70,11 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'cancelled_by');
     }
 
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
+    }
+
     public function scopeStatus($query, ?string $status)
     {
         return $status ? $query->where('status', $status) : $query;
@@ -64,12 +82,11 @@ class Booking extends Model
 
     public function scopeIncomeCounting($query)
     {
-        // Only confirmed bookings represent verified/collected income.
         return $query->where('status', 'confirmed');
     }
 
     public function isCancellable(): bool
     {
-        return $this->status !== 'cancelled';
+        return ! in_array($this->status, ['cancelled', 'rejected']);
     }
 }

@@ -12,6 +12,7 @@ class HomeController extends Controller
     {
         $resources = Resource::query()
             ->active()
+            ->orderByRaw("FIELD(slug, 'zahira-green-ground') DESC")
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'description', 'location', 'image_path', 'price_per_day']);
 

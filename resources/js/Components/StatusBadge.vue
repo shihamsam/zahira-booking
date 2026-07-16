@@ -4,9 +4,10 @@ defineProps({
 });
 
 const styles = {
-    pending: 'bg-floodlight-500/15 text-floodlight-600 border-floodlight-500/30',
+    pending:   'bg-floodlight-500/15 text-floodlight-600 border-floodlight-500/30',
     confirmed: 'bg-pitch-600/10 text-pitch-600 border-pitch-600/30',
     cancelled: 'bg-clay-500/10 text-clay-600 border-clay-500/30',
+    rejected:  'bg-clay-700/10 text-clay-700 border-clay-700/30',
 };
 </script>
 

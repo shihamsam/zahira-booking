@@ -33,15 +33,15 @@ class BookingController extends Controller
             ->withQueryString();
 
         return Inertia::render('Admin/Bookings/Index', [
-            'bookings' => $bookings,
+            'bookings'  => $bookings,
             'resources' => Resource::orderBy('name')->get(['id', 'name']),
-            'filters' => $filters,
+            'filters'   => $filters,
         ]);
     }
 
     public function show(Booking $booking)
     {
-        $booking->load(['resource', 'dates', 'confirmedBy', 'cancelledBy']);
+        $booking->load(['resource', 'dates', 'confirmedBy', 'cancelledBy', 'rejectedBy']);
 
         return Inertia::render('Admin/Bookings/Show', [
             'booking' => $booking,
@@ -51,7 +51,7 @@ class BookingController extends Controller
     public function uploadReceipt(Request $request, Booking $booking)
     {
         $request->validate([
-            'receipt' => ['required', 'image', 'max:5120'],
+            'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
         if ($booking->receipt_path) {
@@ -59,24 +59,23 @@ class BookingController extends Controller
         }
 
         $path = $request->file('receipt')->store('receipts', 'public');
-
         $booking->update(['receipt_path' => $path]);
 
-        return back()->with('success', 'Receipt uploaded.');
+        return back()->with('success', 'Receipt updated.');
     }
 
     public function confirm(Request $request, Booking $booking)
     {
-        if ($booking->status === 'cancelled') {
-            return back()->with('error', 'A cancelled booking cannot be confirmed.');
+        if (! in_array($booking->status, ['pending'], true)) {
+            return back()->with('error', 'Only pending bookings can be confirmed.');
         }
 
         if (! $booking->receipt_path) {
-            return back()->with('error', 'Please upload the deposit receipt before confirming.');
+            return back()->with('error', 'No receipt is attached to this booking.');
         }
 
         $booking->update([
-            'status' => 'confirmed',
+            'status'       => 'confirmed',
             'confirmed_by' => $request->user()->id,
             'confirmed_at' => now(),
         ]);
@@ -86,17 +85,41 @@ class BookingController extends Controller
 
     public function cancel(Request $request, Booking $booking)
     {
+        if (! $booking->isCancellable()) {
+            return back()->with('error', 'This booking cannot be cancelled.');
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:255'],
         ]);
 
         $booking->update([
-            'status' => 'cancelled',
-            'cancelled_by' => $request->user()->id,
-            'cancelled_at' => now(),
+            'status'              => 'cancelled',
+            'cancelled_by'        => $request->user()->id,
+            'cancelled_at'        => now(),
             'cancellation_reason' => $validated['reason'],
         ]);
 
         return back()->with('success', 'Booking cancelled. Its dates are now free again.');
+    }
+
+    public function reject(Request $request, Booking $booking)
+    {
+        if ($booking->status !== 'pending') {
+            return back()->with('error', 'Only pending bookings can be rejected.');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $booking->update([
+            'status'           => 'rejected',
+            'rejected_by'      => $request->user()->id,
+            'rejected_at'      => now(),
+            'rejection_reason' => $validated['reason'],
+        ]);
+
+        return back()->with('success', 'Booking rejected. Its dates are now free again.');
     }
 }

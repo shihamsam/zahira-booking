@@ -21,4 +21,22 @@ return [
 
     // How many months ahead the public calendar allows booking.
     'booking_window_months' => 3,
+
+    // Per-resource pricing definitions keyed by resource slug.
+    // Each slot entry has a 'type' ('flat' or 'hourly') and a 'rate' in LKR.
+    // Flat slots: rate applies once per selected date.
+    // Hourly slots: rate * hours per selected date.
+    'pricing' => [
+        'zahira-green-ground' => [
+            'daytime'       => ['type' => 'flat',   'rate' => 6000,  'label' => 'Daytime (8:30 AM – 6:30 PM)',  'default_start' => '08:30', 'default_end' => '18:30'],
+            'night_4lights' => ['type' => 'hourly', 'rate' => 3500,  'label' => 'Night — 4 Lights (6:30 PM – 6:30 AM)', 'default_start' => '18:30', 'default_end' => '06:30'],
+            'night_2lights' => ['type' => 'hourly', 'rate' => 2000,  'label' => 'Night — 2 Lights (6:30 PM – 6:30 AM)', 'default_start' => '18:30', 'default_end' => '06:30'],
+        ],
+        'azwar-hall' => [
+            'full_day' => ['type' => 'flat', 'rate' => 10000, 'label' => 'Full Day'],
+        ],
+    ],
+
+    // Azwar Hall per-item add-on rates.
+    'azwar_hall_chair_rate' => 10,
 ];

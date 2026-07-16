@@ -51,6 +51,7 @@ function formatDate(d) {
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="rejected">Rejected</option>
             </select>
 
             <select v-model="resourceId" @change="applyFilters" class="field-input">

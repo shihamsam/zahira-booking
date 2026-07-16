@@ -27,9 +27,9 @@ function logout() {
     <div class="min-h-screen flex bg-chalk-50">
         <!-- Desktop sidebar -->
         <aside class="hidden md:flex md:flex-col w-60 bg-pitch-900 text-chalk-50 shrink-0">
-            <div class="px-5 py-5 flex items-center gap-2.5 border-b border-chalk-50/10">
-                <span class="w-8 h-8 rounded-full bg-floodlight-500 flex items-center justify-center font-display font-bold text-pitch-900 text-sm">Z</span>
-                <span class="font-display font-semibold uppercase text-sm tracking-wide">Ground Admin</span>
+            <div class="px-5 py-4 flex items-center gap-3 border-b border-chalk-50/10">
+                <img src="/images/logo.png" alt="Zahira College seal" class="h-10 w-10 object-contain shrink-0" />
+                <img src="/images/logo-text.png" alt="Zahira College" class="h-9 w-auto object-contain min-w-0" />
             </div>
             <nav class="flex-1 px-3 py-4 space-y-1">
                 <Link
@@ -52,7 +52,10 @@ function logout() {
         <div class="flex-1 min-w-0 flex flex-col">
             <!-- Mobile top bar -->
             <header class="md:hidden bg-pitch-900 text-chalk-50 px-4 py-3.5 flex items-center justify-between">
-                <span class="font-display font-semibold uppercase text-sm tracking-wide">Ground Admin</span>
+                <div class="flex items-center gap-2.5">
+                    <img src="/images/logo.png" alt="Zahira College seal" class="h-9 w-9 object-contain shrink-0" />
+                    <img src="/images/logo-text.png" alt="Zahira College" class="h-8 w-auto object-contain" />
+                </div>
                 <button @click="mobileNavOpen = !mobileNavOpen" class="w-9 h-9 flex items-center justify-center" aria-label="Toggle menu">
                     <span class="text-xl">&#9776;</span>
                 </button>

@@ -23,7 +23,7 @@ defineProps({
         </section>
 
         <section class="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-            <h2 class="font-display font-semibold uppercase tracking-wide text-pitch-900 mb-5">Available grounds</h2>
+            <h2 class="font-display font-semibold uppercase tracking-wide text-pitch-900 mb-5">Available resources</h2>
 
             <div class="grid sm:grid-cols-2 gap-5">
                 <Link

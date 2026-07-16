@@ -12,11 +12,22 @@ class ResourceSeeder extends Seeder
         Resource::firstOrCreate(
             ['slug' => 'zahira-green-ground'],
             [
-                'name' => 'Zahira Green Ground',
-                'description' => 'Main school ground, suitable for cricket, football and outdoor events.',
-                'location' => 'Zahira College',
-                'price_per_day' => 5000,
-                'is_active' => true,
+                'name'          => 'Zahira Green Ground',
+                'description'   => 'Main school ground, suitable for cricket, football and outdoor events.',
+                'location'      => 'Zahira College',
+                'price_per_day' => 6000,
+                'is_active'     => true,
+            ]
+        );
+
+        Resource::firstOrCreate(
+            ['slug' => 'azwar-hall'],
+            [
+                'name'          => 'Azwar Hall',
+                'description'   => 'Indoor event hall suitable for functions, seminars, and gatherings. Sound system available on request.',
+                'location'      => 'Zahira College',
+                'price_per_day' => 10000,
+                'is_active'     => true,
             ]
         );
     }
