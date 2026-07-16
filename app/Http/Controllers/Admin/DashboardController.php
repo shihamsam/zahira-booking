@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use Illuminate\Support\Facades\DB;
+use App\Models\BookingDate;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $now = now();
+        $now   = now();
+        $today = $now->format('Y-m-d');
 
         $stats = [
             'pending_count' => Booking::where('status', 'pending')->count(),
@@ -24,11 +25,24 @@ class DashboardController extends Controller
                 ->whereYear('confirmed_at', $now->year)
                 ->sum('total_amount'),
             'total_bookings' => Booking::count(),
+            'today_count' => BookingDate::where('date', $today)
+                ->whereHas('booking', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected']))
+                ->distinct('booking_id')
+                ->count('booking_id'),
+            'today_income' => (float) Booking::incomeCounting()
+                ->whereHas('dates', fn ($q) => $q->where('date', $today))
+                ->sum('total_amount'),
         ];
 
-        $upcoming = Booking::with(['resource', 'dates' => fn ($q) => $q->where('date', '>=', $now->format('Y-m-d'))])
-            ->whereHas('dates', fn ($q) => $q->where('date', '>=', $now->format('Y-m-d')))
-            ->where('status', '!=', 'cancelled')
+        $todayBookings = Booking::with(['resource', 'dates' => fn ($q) => $q->where('date', $today)])
+            ->whereHas('dates', fn ($q) => $q->where('date', $today))
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->orderBy('created_at')
+            ->get();
+
+        $upcoming = Booking::with(['resource', 'dates' => fn ($q) => $q->where('date', '>=', $today)])
+            ->whereHas('dates', fn ($q) => $q->where('date', '>=', $today))
+            ->whereNotIn('status', ['cancelled', 'rejected'])
             ->orderBy('created_at', 'desc')
             ->limit(8)
             ->get();
@@ -40,8 +54,9 @@ class DashboardController extends Controller
             ->get();
 
         return Inertia::render('Admin/Dashboard', [
-            'stats' => $stats,
-            'upcoming' => $upcoming,
+            'stats'         => $stats,
+            'todayBookings' => $todayBookings,
+            'upcoming'      => $upcoming,
             'recentPending' => $recentPending,
         ]);
     }

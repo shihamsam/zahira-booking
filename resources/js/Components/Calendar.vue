@@ -2,10 +2,11 @@
 import { ref, computed } from 'vue';
 
 const props = defineProps({
-    modelValue: { type: Array, default: () => [] },
+    modelValue:       { type: Array, default: () => [] },
     unavailableDates: { type: Array, default: () => [] },
-    minDate: { type: String, default: null },
-    maxDate: { type: String, default: null },
+    bookedDates:      { type: Array, default: () => [] }, // informational amber — still selectable
+    minDate:          { type: String, default: null },
+    maxDate:          { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -24,7 +25,8 @@ function toKey(d) {
 }
 
 const unavailableSet = computed(() => new Set(props.unavailableDates));
-const selectedSet = computed(() => new Set(props.modelValue));
+const bookedSet      = computed(() => new Set(props.bookedDates));
+const selectedSet    = computed(() => new Set(props.modelValue));
 
 const minLimit = computed(() => (props.minDate ? new Date(props.minDate + 'T00:00:00') : today));
 const maxLimit = computed(() => (props.maxDate ? new Date(props.maxDate + 'T00:00:00') : null));
@@ -110,7 +112,8 @@ const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                         d.getMonth() !== viewDate.getMonth() ? 'text-transparent pointer-events-none' : '',
                         isDisabled(d) && d.getMonth() === viewDate.getMonth() ? 'bg-chalk-100 text-ink-700/30 line-through cursor-not-allowed' : '',
                         !isDisabled(d) && selectedSet.has(toKey(d)) ? 'bg-pitch-600 text-chalk-50 font-bold' : '',
-                        !isDisabled(d) && !selectedSet.has(toKey(d)) ? 'bg-chalk-50 hover:bg-pitch-100 text-ink-900 border border-chalk-200' : '',
+                        !isDisabled(d) && !selectedSet.has(toKey(d)) && bookedSet.has(toKey(d)) ? 'bg-floodlight-500/20 text-floodlight-600 border border-floodlight-500/40 hover:bg-floodlight-500/30 font-semibold' : '',
+                        !isDisabled(d) && !selectedSet.has(toKey(d)) && !bookedSet.has(toKey(d)) ? 'bg-chalk-50 hover:bg-pitch-100 text-ink-900 border border-chalk-200' : '',
                     ]"
                 >
                     {{ d.getDate() }}
@@ -118,9 +121,10 @@ const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             </template>
         </div>
 
-        <div class="flex items-center gap-4 mt-4 text-xs text-ink-700/70">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 text-xs text-ink-700/70">
             <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-pitch-600"></span> Selected</span>
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-chalk-100 border border-chalk-200"></span> Booked</span>
+            <span v-if="bookedDates.length" class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-floodlight-500/30 border border-floodlight-500/40"></span> Booked</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-chalk-100 border border-chalk-200 line-through"></span> Unavailable</span>
         </div>
     </div>
 </template>

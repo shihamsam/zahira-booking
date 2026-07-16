@@ -59,6 +59,19 @@ class PricingService
 
     private function slotConfig(Resource $resource, string $slotType): ?array
     {
-        return config("booking.pricing.{$resource->slug}.{$slotType}");
+        $config = config("booking.pricing.{$resource->slug}.{$slotType}");
+
+        if (! $config) {
+            return null;
+        }
+
+        // DB pricing_overrides stores a rate map: slot_type → rate (int).
+        // Admin-set rates take precedence over the config defaults.
+        $overrides = $resource->pricing_overrides ?? [];
+        if (isset($overrides[$slotType])) {
+            $config['rate'] = (int) $overrides[$slotType];
+        }
+
+        return $config;
     }
 }

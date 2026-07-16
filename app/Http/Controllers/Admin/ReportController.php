@@ -24,17 +24,9 @@ class ReportController extends Controller
             ->whereBetween('confirmed_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->when($resourceId, fn ($q) => $q->where('resource_id', $resourceId));
 
-        $totalIncome = (float) (clone $baseQuery)->sum('total_amount');
+        $totalIncome   = (float) (clone $baseQuery)->sum('total_amount');
         $totalBookings = (clone $baseQuery)->count();
 
-        $groupFormat = match ($preset) {
-            'yearly' => '%Y',
-            'quarterly' => '%Y-Q',
-            default => '%Y-%m',
-        };
-
-        // MySQL doesn't have a native quarter format token for DATE_FORMAT,
-        // so quarterly grouping is computed in PHP instead of SQL.
         $rows = (clone $baseQuery)
             ->select('confirmed_at', 'total_amount')
             ->orderBy('confirmed_at')
@@ -44,15 +36,16 @@ class ReportController extends Controller
             $date = Carbon::parse($row->confirmed_at);
 
             return match ($preset) {
-                'yearly' => $date->format('Y'),
-                'quarterly' => $date->format('Y').' Q'.$date->quarter,
-                default => $date->format('Y-m'),
+                'yearly'    => $date->format('Y'),
+                'quarterly' => $date->format('Y') . ' Q' . $date->quarter,
+                'weekly'    => $date->format('Y') . ' W' . $date->format('W'),
+                default     => $date->format('Y-m'),
             };
         })->map(function ($group, $label) {
             return [
-                'period' => $label,
+                'period'   => $label,
                 'bookings' => $group->count(),
-                'income' => (float) $group->sum('total_amount'),
+                'income'   => (float) $group->sum('total_amount'),
             ];
         })->values();
 
@@ -67,17 +60,17 @@ class ReportController extends Controller
 
         return Inertia::render('Admin/Reports/Index', [
             'filters' => [
-                'from' => $from->format('Y-m-d'),
-                'to' => $to->format('Y-m-d'),
-                'preset' => $preset,
+                'from'        => $from->format('Y-m-d'),
+                'to'          => $to->format('Y-m-d'),
+                'preset'      => $preset,
                 'resource_id' => $resourceId,
             ],
-            'resources' => Resource::orderBy('name')->get(['id', 'name']),
-            'summary' => [
-                'total_income' => $totalIncome,
+            'resources'     => Resource::orderBy('name')->get(['id', 'name']),
+            'summary'       => [
+                'total_income'   => $totalIncome,
                 'total_bookings' => $totalBookings,
             ],
-            'breakdown' => $breakdown,
+            'breakdown'  => $breakdown,
             'byResource' => $byResource,
         ]);
     }
@@ -85,7 +78,8 @@ class ReportController extends Controller
     public function export(Request $request): StreamedResponse
     {
         [$from, $to] = $this->resolveRange($request);
-        $resourceId = $request->input('resource_id');
+        $resourceId  = $request->input('resource_id');
+        $format      = $request->input('format', 'csv');
 
         $bookings = Booking::with('resource')
             ->incomeCounting()
@@ -94,30 +88,77 @@ class ReportController extends Controller
             ->orderBy('confirmed_at')
             ->get();
 
-        $filename = 'income-report-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
+        $filename = 'income-report-' . $from->format('Ymd') . '-' . $to->format('Ymd');
 
+        if ($format === 'excel') {
+            return $this->exportExcel($bookings, $filename);
+        }
+
+        return $this->exportCsv($bookings, $filename);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private function exportCsv($bookings, string $filename): StreamedResponse
+    {
         return response()->streamDownload(function () use ($bookings) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Reference', 'Ground', 'Full Name', 'Mobile', 'Confirmed At', 'Amount']);
+            // UTF-8 BOM so Excel opens it correctly.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['Reference', 'Facility', 'Full Name', 'Mobile', 'NIC', 'Purpose', 'Slot', 'Dates', 'Confirmed At', 'Amount (LKR)']);
 
-            foreach ($bookings as $booking) {
+            foreach ($bookings as $b) {
                 fputcsv($handle, [
-                    $booking->reference_no,
-                    $booking->resource->name,
-                    $booking->full_name,
-                    $booking->mobile_number,
-                    optional($booking->confirmed_at)->format('Y-m-d H:i'),
-                    $booking->total_amount,
+                    $b->reference_no,
+                    $b->resource->name,
+                    $b->full_name,
+                    $b->mobile_number,
+                    $b->nic ?? '',
+                    $b->purpose,
+                    $b->slot_type ?? '',
+                    $b->dates->pluck('date')->map(fn ($d) => $d->format('d M Y'))->join(', '),
+                    optional($b->confirmed_at)->format('Y-m-d H:i'),
+                    number_format($b->total_amount, 2),
                 ]);
             }
 
             fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    /**
-     * @return array{0: Carbon, 1: Carbon, 2: string}
-     */
+    private function exportExcel($bookings, string $filename): StreamedResponse
+    {
+        // SpreadsheetML — opens natively in Excel without any extra PHP package.
+        return response()->streamDownload(function () use ($bookings) {
+            echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+            echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+                . ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' . "\n";
+            echo '<Worksheet ss:Name="Income Report"><Table>' . "\n";
+
+            $headers = ['Reference', 'Facility', 'Full Name', 'Mobile', 'NIC', 'Purpose', 'Slot', 'Dates', 'Confirmed At', 'Amount (LKR)'];
+            echo '<Row>' . implode('', array_map(fn ($h) => '<Cell><Data ss:Type="String">' . htmlspecialchars($h) . '</Data></Cell>', $headers)) . '</Row>' . "\n";
+
+            foreach ($bookings as $b) {
+                $cells = [
+                    $b->reference_no,
+                    $b->resource->name,
+                    $b->full_name,
+                    $b->mobile_number,
+                    $b->nic ?? '',
+                    $b->purpose,
+                    $b->slot_type ?? '',
+                    $b->dates->pluck('date')->map(fn ($d) => $d->format('d M Y'))->join(', '),
+                    optional($b->confirmed_at)->format('Y-m-d H:i'),
+                    number_format($b->total_amount, 2),
+                ];
+                echo '<Row>' . implode('', array_map(fn ($v) => '<Cell><Data ss:Type="String">' . htmlspecialchars((string) $v) . '</Data></Cell>', $cells)) . '</Row>' . "\n";
+            }
+
+            echo '</Table></Worksheet></Workbook>';
+        }, $filename . '.xls', ['Content-Type' => 'application/vnd.ms-excel']);
+    }
+
+    /** @return array{0: Carbon, 1: Carbon, 2: string} */
     protected function resolveRange(Request $request): array
     {
         $preset = $request->input('preset', 'monthly');
@@ -133,9 +174,10 @@ class ReportController extends Controller
         $now = now();
 
         return match ($preset) {
-            'yearly' => [$now->copy()->startOfYear(), $now->copy()->endOfYear(), $preset],
+            'yearly'    => [$now->copy()->startOfYear(),   $now->copy()->endOfYear(),   $preset],
             'quarterly' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter(), $preset],
-            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth(), $preset],
+            'weekly'    => [$now->copy()->startOfWeek(Carbon::MONDAY), $now->copy()->endOfWeek(Carbon::SUNDAY), $preset],
+            default     => [$now->copy()->startOfMonth(),  $now->copy()->endOfMonth(),  $preset],
         };
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\DatesUnavailableException;
 use App\Mail\NewBookingReceived;
+use App\Models\BlockedDate;
 use App\Models\Booking;
 use App\Models\BookingDate;
 use App\Models\Resource;
@@ -28,16 +29,21 @@ class BookingService
      */
     public function unavailableDates(Resource $resource, string $from, string $to, ?string $slotType = null): array
     {
-        return BookingDate::query()
+        $booked = BookingDate::query()
             ->where('resource_id', $resource->id)
             ->whereBetween('date', [$from, $to])
             ->when($slotType, fn ($q) => $q->where('slot_type', $slotType))
             ->whereHas('booking', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected']))
             ->pluck('date')
-            ->map(fn ($date) => $date->format('Y-m-d'))
-            ->unique()
-            ->values()
-            ->all();
+            ->map(fn ($date) => $date->format('Y-m-d'));
+
+        $blocked = BlockedDate::query()
+            ->forResource($resource->id)
+            ->whereBetween('date', [$from, $to])
+            ->pluck('date')
+            ->map(fn ($date) => $date->format('Y-m-d'));
+
+        return $booked->merge($blocked)->unique()->values()->all();
     }
 
     /**
@@ -105,6 +111,18 @@ class BookingService
 
             if (! empty($taken)) {
                 throw new DatesUnavailableException($taken);
+            }
+
+            // Reject dates that have been blocked by an admin.
+            $blocked = BlockedDate::query()
+                ->forResource($resource->id)
+                ->whereIn('date', $dates)
+                ->pluck('date')
+                ->map(fn ($d) => $d->format('Y-m-d'))
+                ->all();
+
+            if (! empty($blocked)) {
+                throw new DatesUnavailableException($blocked);
             }
 
             $unitPrice   = $this->pricing->unitPrice($resource, $slotType, $hours);

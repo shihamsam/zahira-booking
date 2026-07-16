@@ -17,14 +17,16 @@ class Resource extends Model
         'location',
         'image_path',
         'price_per_day',
+        'pricing_overrides',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'price_per_day' => 'decimal:2',
-            'is_active' => 'boolean',
+            'price_per_day'     => 'decimal:2',
+            'pricing_overrides' => 'array',
+            'is_active'         => 'boolean',
         ];
     }
 

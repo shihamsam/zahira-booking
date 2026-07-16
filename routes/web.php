@@ -1,9 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\BlockedDateController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Public\BookingController;
 use App\Http\Controllers\Public\HomeController;
@@ -50,6 +53,15 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
     Route::post('/bookings/{booking}/reject', [AdminBookingController::class, 'reject'])->name('bookings.reject');
+
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
+
+    Route::get('/blocked-dates', [BlockedDateController::class, 'index'])->name('blocked-dates.index');
+    Route::post('/blocked-dates', [BlockedDateController::class, 'store'])->name('blocked-dates.store');
+    Route::delete('/blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy'])->name('blocked-dates.destroy');
+
+    Route::get('/resources', [ResourceController::class, 'index'])->name('resources.index');
+    Route::put('/resources/{resource}', [ResourceController::class, 'update'])->name('resources.update');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
