@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AddBookingToGoogleCalendar;
+use App\Jobs\RemoveBookingFromGoogleCalendar;
 use App\Mail\BookingCancelled;
 use App\Mail\BookingConfirmed;
 use App\Mail\BookingRejected;
@@ -88,6 +90,8 @@ class BookingController extends Controller
             Mail::to($booking->email)->send(new BookingConfirmed($booking->load('resource', 'dates')));
         }
 
+        AddBookingToGoogleCalendar::dispatch($booking);
+
         return back()->with('success', 'Booking confirmed.');
     }
 
@@ -112,6 +116,10 @@ class BookingController extends Controller
             Mail::to($booking->email)->send(new BookingCancelled($booking->load('resource', 'dates')));
         }
 
+        if ($booking->google_event_id) {
+            RemoveBookingFromGoogleCalendar::dispatch($booking->google_event_id);
+        }
+
         return back()->with('success', 'Booking cancelled. Its dates are now free again.');
     }
 
@@ -134,6 +142,10 @@ class BookingController extends Controller
 
         if ($booking->email) {
             Mail::to($booking->email)->send(new BookingRejected($booking->load('resource', 'dates')));
+        }
+
+        if ($booking->google_event_id) {
+            RemoveBookingFromGoogleCalendar::dispatch($booking->google_event_id);
         }
 
         return back()->with('success', 'Booking rejected. Its dates are now free again.');

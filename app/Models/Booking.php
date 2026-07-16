@@ -37,6 +37,7 @@ class Booking extends Model
         'rejected_at',
         'rejection_reason',
         'admin_notes',
+        'google_event_id',
     ];
 
     protected function casts(): array

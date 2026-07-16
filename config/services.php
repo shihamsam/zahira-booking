@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'google_calendar' => [
+        // The Google Calendar ID to sync confirmed bookings into.
+        // Found under "Integrate calendar" in Google Calendar settings.
+        'calendar_id' => env('GOOGLE_CALENDAR_ID'),
+
+        // Absolute path to the service account credentials JSON file.
+        // Download from Google Cloud Console → IAM → Service Accounts → Keys.
+        // Store at e.g. storage/app/private/google-credentials.json
+        'credentials_path' => env('GOOGLE_SERVICE_ACCOUNT_JSON'),
+
+        // IANA timezone for event timestamps (should match the facility location).
+        'timezone' => env('GOOGLE_CALENDAR_TIMEZONE', 'Asia/Colombo'),
+    ],
+
 ];
