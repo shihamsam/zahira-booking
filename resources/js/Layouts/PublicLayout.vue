@@ -10,9 +10,14 @@ import { Link } from '@inertiajs/vue3';
                     <img src="/images/logo.png" alt="Zahira College seal" class="h-12 w-12 object-contain shrink-0" />
                     <img src="/images/logo-text.png" alt="Zahira College" class="h-10 w-auto object-contain" />
                 </Link>
-                <Link href="/admin/login" class="text-xs sm:text-sm text-chalk-50/70 hover:text-chalk-50 font-medium">
-                    Admin
-                </Link>
+                <div class="flex items-center gap-4">
+                    <Link href="/upload-receipt" class="text-xs sm:text-sm text-chalk-50/70 hover:text-chalk-50 font-medium">
+                        Upload Receipt
+                    </Link>
+                    <Link href="/admin/login" class="text-xs sm:text-sm text-chalk-50/70 hover:text-chalk-50 font-medium">
+                        Admin
+                    </Link>
+                </div>
             </div>
         </header>
 

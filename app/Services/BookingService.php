@@ -82,7 +82,7 @@ class BookingService
         string $nic,
         string $purpose,
         string $slotType,
-        UploadedFile $receiptFile,
+        ?UploadedFile $receiptFile = null,
         ?string $email = null,
         ?string $startTime = null,
         ?string $endTime = null,
@@ -128,8 +128,9 @@ class BookingService
             $unitPrice   = $this->pricing->unitPrice($resource, $slotType, $hours);
             $totalAmount = $this->pricing->totalAmount($resource, $slotType, $dates, $hours, $chairCount);
 
-            // Store receipt now — user uploaded it at submission time.
-            $receiptPath = $receiptFile->store('receipts', 'public');
+            $receiptPath = $receiptFile
+                ? $receiptFile->store('receipts', 'public')
+                : null;
 
             $booking = Booking::create([
                 'reference_no'           => $this->generateReferenceNo($resource),

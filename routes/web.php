@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Public\BookingController;
 use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\ReceiptUploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,6 +29,10 @@ Route::get('/facilities/{resource:slug}', [BookingController::class, 'show'])->n
 Route::get('/facilities/{resource:slug}/availability', [BookingController::class, 'availability'])->name('facilities.availability');
 Route::post('/facilities/{resource:slug}/bookings', [BookingController::class, 'store'])->name('bookings.store');
 Route::get('/bookings/{referenceNo}/confirmation', [BookingController::class, 'confirmation'])->name('bookings.confirmation');
+
+Route::get('/upload-receipt', [ReceiptUploadController::class, 'show'])->name('receipt.show');
+Route::get('/upload-receipt/{referenceNo}', [ReceiptUploadController::class, 'booking'])->name('receipt.booking');
+Route::post('/upload-receipt/{referenceNo}', [ReceiptUploadController::class, 'upload'])->name('receipt.upload');
 
 /*
 |--------------------------------------------------------------------------

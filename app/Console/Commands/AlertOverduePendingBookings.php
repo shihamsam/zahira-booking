@@ -22,7 +22,7 @@ class AlertOverduePendingBookings extends Command
             ->whereHas('dates', fn ($q) => $q->where('date', '<=', $cutoff->format('Y-m-d')))
             ->get()
             // Keep only bookings where the earliest date is genuinely within 2 days.
-            ->filter(fn ($b) => $b->dates->min('date') <= $cutoff->format('Y-m-d'))
+            ->filter(fn ($b) => $b->dates->min('date')?->format('Y-m-d') <= $cutoff->format('Y-m-d'))
             ->values();
 
         if ($bookings->isEmpty()) {

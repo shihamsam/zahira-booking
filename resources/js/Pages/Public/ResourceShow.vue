@@ -274,9 +274,13 @@ function submit() {
 
                         <!-- Receipt upload -->
                         <div class="pt-3 border-t border-chalk-200">
-                            <label class="field-label">Payment receipt <span class="text-clay-600">*</span></label>
+                            <label class="field-label">
+                                Payment receipt
+                                <span class="text-ink-700/40 font-normal">(optional)</span>
+                            </label>
                             <p class="text-xs text-ink-700/50 mb-2">
-                                Upload your bank deposit receipt (JPG, PNG or PDF, max 5 MB).
+                                Upload now if you have it — JPG, PNG or PDF, max 5 MB.
+                                You can also upload it later from the <strong>Upload Receipt</strong> page.
                             </p>
                             <input
                                 type="file"
@@ -304,7 +308,7 @@ function submit() {
                         <button
                             type="submit"
                             class="btn-primary w-full"
-                            :disabled="form.processing || form.dates.length === 0 || !form.receipt_file"
+                            :disabled="form.processing || form.dates.length === 0"
                         >
                             {{ form.processing ? 'Submitting...' : 'Submit booking' }}
                         </button>

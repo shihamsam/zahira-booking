@@ -1,4 +1,5 @@
 <script setup>
+import { Link } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 
@@ -71,32 +72,43 @@ function formatDate(d) {
                     </dd>
                 </dl>
 
-                <!-- Receipt confirmation -->
-                <div class="bg-pitch-50 rounded-card p-5 mb-6">
-                    <h2 class="font-display font-semibold uppercase tracking-wide text-sm text-pitch-900 mb-3">
-                        Receipt received
-                    </h2>
-                    <p class="text-sm text-ink-700 mb-3">
-                        Your payment receipt has been uploaded. Our admin will verify it and confirm your booking.
-                        You will be notified once the booking is approved.
-                    </p>
+                <!-- Receipt section — adapts based on whether one was uploaded -->
+                <div class="rounded-card p-5 mb-6" :class="booking.receipt_path ? 'bg-pitch-50' : 'bg-floodlight-500/10 border border-floodlight-500/30'">
+                    <template v-if="booking.receipt_path">
+                        <h2 class="font-display font-semibold uppercase tracking-wide text-sm text-pitch-900 mb-3">
+                            Receipt received
+                        </h2>
+                        <p class="text-sm text-ink-700 mb-3">
+                            Your payment receipt has been uploaded. Our admin will verify it and confirm your booking shortly.
+                        </p>
+                        <a :href="`/storage/${booking.receipt_path}`" target="_blank" class="block">
+                            <img
+                                v-if="!booking.receipt_path.endsWith('.pdf')"
+                                :src="`/storage/${booking.receipt_path}`"
+                                alt="Your uploaded receipt"
+                                class="rounded-md border border-pitch-900/10 max-h-40 object-contain"
+                            />
+                            <span v-else class="inline-flex items-center gap-2 text-sm text-pitch-600 underline">
+                                View uploaded PDF receipt
+                            </span>
+                        </a>
+                    </template>
 
-                    <a
-                        v-if="booking.receipt_path"
-                        :href="`/storage/${booking.receipt_path}`"
-                        target="_blank"
-                        class="block"
-                    >
-                        <img
-                            v-if="!booking.receipt_path.endsWith('.pdf')"
-                            :src="`/storage/${booking.receipt_path}`"
-                            alt="Your uploaded receipt"
-                            class="rounded-md border border-pitch-900/10 max-h-40 object-contain"
-                        />
-                        <span v-else class="inline-flex items-center gap-2 text-sm text-pitch-600 underline">
-                            View uploaded PDF receipt
-                        </span>
-                    </a>
+                    <template v-else>
+                        <h2 class="font-display font-semibold uppercase tracking-wide text-sm text-floodlight-600 mb-2">
+                            Receipt not yet uploaded
+                        </h2>
+                        <p class="text-sm text-ink-700 mb-4">
+                            Your booking is reserved but payment has not been verified yet.
+                            Please make the bank deposit and upload your receipt to complete the process.
+                        </p>
+                        <Link
+                            :href="`/upload-receipt/${booking.reference_no}`"
+                            class="btn-primary inline-block"
+                        >
+                            Upload receipt now
+                        </Link>
+                    </template>
                 </div>
 
                 <!-- Bank details for reference -->
@@ -116,9 +128,15 @@ function formatDate(d) {
                     </dl>
                 </div>
 
-                <p class="text-xs text-ink-700/50 text-center">
+                <p class="text-xs text-ink-700/50 text-center mb-3">
                     Save your reference number &mdash; you'll need it if you contact us about this booking.
                 </p>
+                <Link
+                    :href="`/upload-receipt/${booking.reference_no}`"
+                    class="block text-center text-xs text-pitch-600 hover:underline"
+                >
+                    Need to upload a different receipt?
+                </Link>
             </div>
         </div>
     </PublicLayout>

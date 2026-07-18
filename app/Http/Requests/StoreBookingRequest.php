@@ -29,7 +29,7 @@ class StoreBookingRequest extends FormRequest
             'hours'         => [$isNight ? 'required' : 'nullable', 'integer', 'min:1', 'max:12'],
             'chair_count'   => ['nullable', 'integer', 'min:0', 'max:9999'],
             'sound_system_requested' => ['nullable', 'boolean'],
-            'receipt_file'  => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'receipt_file'  => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'dates'         => ['required', 'array', 'min:1', 'max:31'],
             'dates.*'       => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
         ];
@@ -44,7 +44,6 @@ class StoreBookingRequest extends FormRequest
             'start_time.required'   => 'Please enter the start time for your session.',
             'end_time.required'     => 'Please enter the end time for your session.',
             'hours.required'        => 'Please specify how many hours you need.',
-            'receipt_file.required' => 'Please upload your payment receipt.',
             'receipt_file.mimes'    => 'Receipt must be a JPG, PNG, or PDF file.',
             'receipt_file.max'      => 'Receipt file must be under 5 MB.',
             'dates.required'        => 'Please select at least one date.',

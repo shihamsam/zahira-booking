@@ -1,0 +1,21 @@
+name: zahira-testing
+
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: zahira-test-mariadb
+    ports:
+      - "3307:3306"
+    environment:
+      MARIADB_DATABASE: zahira_test
+      MARIADB_ROOT_PASSWORD: zahira_secret
+      MARIADB_USER: zahira_test
+      MARIADB_PASSWORD: zahira_test
+    # tmpfs keeps the data in RAM — fast for CI / test runs, discarded on stop
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uzahira_test", "-pzahira_test"]
+      interval: 3s
+      timeout: 5s
+      retries: 20

@@ -30,10 +30,10 @@ function logout() {
     <div class="min-h-screen flex bg-chalk-50">
         <!-- Desktop sidebar -->
         <aside class="hidden md:flex md:flex-col w-60 bg-pitch-900 text-chalk-50 shrink-0">
-            <div class="px-5 py-4 flex items-center gap-3 border-b border-chalk-50/10">
-                <img src="/images/logo.png" alt="Zahira College seal" class="h-10 w-10 object-contain shrink-0" />
-                <img src="/images/logo-text.png" alt="Zahira College" class="h-9 w-auto object-contain min-w-0" />
-            </div>
+            <Link href="/admin/login" class="px-5 py-4 flex items-center gap-3 border-b border-chalk-50/10 hover:bg-chalk-50/5 transition-colors">
+                <img src="/images/logo.png" alt="Zahira College seal" class="h-12 w-12 object-contain shrink-0" />
+                <img src="/images/logo-text.png" alt="Zahira College" class="h-10 w-auto object-contain min-w-0" />
+            </Link>
             <nav class="flex-1 px-3 py-4 space-y-1">
                 <Link
                     v-for="item in navItems"
@@ -45,7 +45,10 @@ function logout() {
                     {{ item.label }}
                 </Link>
             </nav>
-            <div class="px-3 py-4 border-t border-chalk-50/10">
+            <div class="px-3 py-4 border-t border-chalk-50/10 space-y-1">
+                <Link href="/" class="block px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70 hover:bg-chalk-50/5 hover:text-chalk-50">
+                    ← View site
+                </Link>
                 <button @click="logout" class="w-full text-left px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70 hover:bg-chalk-50/5 hover:text-chalk-50">
                     Log out
                 </button>
@@ -55,10 +58,10 @@ function logout() {
         <div class="flex-1 min-w-0 flex flex-col">
             <!-- Mobile top bar -->
             <header class="md:hidden bg-pitch-900 text-chalk-50 px-4 py-3.5 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <img src="/images/logo.png" alt="Zahira College seal" class="h-9 w-9 object-contain shrink-0" />
-                    <img src="/images/logo-text.png" alt="Zahira College" class="h-8 w-auto object-contain" />
-                </div>
+                <Link href="/admin/login" class="flex items-center gap-2.5">
+                    <img src="/images/logo.png" alt="Zahira College seal" class="h-10 w-10 object-contain shrink-0" />
+                    <img src="/images/logo-text.png" alt="Zahira College" class="h-9 w-auto object-contain" />
+                </Link>
                 <button @click="mobileNavOpen = !mobileNavOpen" class="w-9 h-9 flex items-center justify-center" aria-label="Toggle menu">
                     <span class="text-xl">&#9776;</span>
                 </button>

@@ -1,8 +1,8 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
-    email: '',
+    email:    '',
     password: '',
     remember: false,
 });
@@ -17,11 +17,14 @@ function submit() {
 <template>
     <div class="min-h-screen flex items-center justify-center bg-pitch-900 px-4">
         <div class="w-full max-w-sm">
-            <div class="flex flex-col items-center mb-6">
-                <span class="w-11 h-11 rounded-full bg-floodlight-500 flex items-center justify-center font-display font-bold text-pitch-900 mb-3">Z</span>
-                <h1 class="font-display font-semibold uppercase tracking-wide text-chalk-50">Ground Admin</h1>
+
+            <!-- Logo -->
+            <div class="flex flex-col items-center mb-8">
+                <img src="/images/logo.png" alt="Zahira College seal" class="h-20 w-20 object-contain mb-3" />
+                <img src="/images/logo-text.png" alt="Zahira College" class="h-10 w-auto object-contain" />
             </div>
 
+            <!-- Login form -->
             <form @submit.prevent="submit" class="card p-6 space-y-4">
                 <div>
                     <label class="field-label">Email</label>
@@ -44,6 +47,14 @@ function submit() {
                     {{ form.processing ? 'Signing in...' : 'Sign in' }}
                 </button>
             </form>
+
+            <!-- Back to site -->
+            <p class="text-center mt-5 text-sm">
+                <Link href="/" class="text-chalk-50/60 hover:text-chalk-50">
+                    ← Back to main site
+                </Link>
+            </p>
+
         </div>
     </div>
 </template>
