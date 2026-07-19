@@ -54,14 +54,17 @@ function fmtRange(start, end) {
                 <span class="font-normal text-base text-ink-700/60 ml-2">{{ fmtRange(weekStart, weekEnd) }}</span>
             </h1>
             <div class="flex items-center gap-2 flex-wrap">
-                <!-- Date picker — jump to any week instantly -->
-                <input
-                    v-model="pickedDate"
-                    type="date"
-                    @change="jumpToDate"
-                    class="field-input text-sm py-1.5"
-                    title="Jump to week"
-                />
+                <!-- "Go to" date picker -->
+                <label class="flex items-center gap-2 bg-white border border-chalk-200 rounded-md px-3 h-9 text-sm text-ink-700/60 shadow-sm">
+                    <span class="font-medium text-ink-700 whitespace-nowrap">Go to</span>
+                    <input
+                        v-model="pickedDate"
+                        type="date"
+                        @change="jumpToDate"
+                        class="bg-transparent border-none outline-none text-ink-900 text-sm w-36 cursor-pointer"
+                    />
+                </label>
+                <div class="w-px h-5 bg-chalk-200"></div>
                 <button @click="nav(prevWeek)" class="btn-outline text-xs px-3 py-1.5">&larr; Prev</button>
                 <button @click="today()" class="btn-outline text-xs px-3 py-1.5">Today</button>
                 <button @click="nav(nextWeek)" class="btn-outline text-xs px-3 py-1.5">Next &rarr;</button>
