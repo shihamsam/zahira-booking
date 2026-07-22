@@ -12,6 +12,7 @@ class BookingDate extends Model
         'resource_id',
         'date',
         'slot_type',
+        'slot_hour',
         'unit_price',
     ];
 

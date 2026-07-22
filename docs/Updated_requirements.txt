@@ -1,0 +1,23 @@
+We have some updated requirements to the project
+- In the home page, we should provide the following capabilities:
+  - Take Name and Phone Number from the user to make a booking
+  - Clickable cards for each resource, where user can only select one resource at a time
+  - A button that says "Choose Your Time Slot" for the selected resource
+  - Upon clicking the "Choose Your Time Slot" button, user should be navigated to a page with a calendar view with the ability to choose future dates only
+  - User should be able to select one date only
+  - Upon selecting a date, we should display available time slots for that date based on the resource selected
+  - 1-hour time slots should be displayed in a grid format with the ability to select one or more time slots
+  - Show any other options for the user such as "2 lights" or "4 lights" if the resource has such options
+  - User is able to select one or more time slots for the selected date if available
+  - Upon clicking the "Confirm Booking" button, we should display a summary of the booking with the following details:
+    - Name
+    - Phone Number
+    - Resource selected
+    - Date selected
+    - Time slots selected
+    - Amount to be paid (if applicable)
+    - Any other options selected (if applicable)
+    - Show "Booking Terms" (Booking once confirmed cannot be cancelled within 24 hours of the slot time)
+    - I agree to the terms and conditions checkbox
+  - We should provide option to Whatsapp the booking summary to the user after confirming the booking
+    - Example: *New Booking Request* Ref: *SFK-2026-000140* Name: Rinas Ahmed Phone: 0785858564 Date: 2026-07-22 Times: - 9:00 PM - 10:00 PM Total Amount: Rs. 3,500.00 Status: *Pending* 

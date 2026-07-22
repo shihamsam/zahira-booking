@@ -7,6 +7,7 @@ const props = defineProps({
     bookedDates:      { type: Array, default: () => [] }, // informational amber — still selectable
     minDate:          { type: String, default: null },
     maxDate:          { type: String, default: null },
+    singleSelect:     { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -62,6 +63,10 @@ function isDisabled(d) {
 function toggle(d) {
     if (isDisabled(d)) return;
     const key = toKey(d);
+    if (props.singleSelect) {
+        emit('update:modelValue', props.modelValue[0] === key ? [] : [key]);
+        return;
+    }
     const current = new Set(props.modelValue);
     if (current.has(key)) {
         current.delete(key);

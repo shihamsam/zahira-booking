@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import Modal from '@/Components/Modal.vue';
@@ -11,7 +11,7 @@ const props = defineProps({
 
 const SLOT_LABELS = {
     full_day:     'Full Day',
-    daytime:      'Daytime (8:30 AM – 6:30 PM)',
+    daytime:      'Daytime (6:00 AM – 6:00 PM)',
     night_4lights:'Night — 4 Lights',
     night_2lights:'Night — 2 Lights',
 };
@@ -27,6 +27,25 @@ function formatDate(d) {
         day: 'numeric', month: 'short', year: 'numeric',
     });
 }
+
+// Night bookings create one booking_dates row per hour — deduplicate for display.
+const uniqueDates = computed(() =>
+    [...new Map(props.booking.dates.map(d => [d.date, d])).values()]
+);
+
+function hourLabel(h) {
+    const norm = ((h % 24) + 24) % 24;
+    const ampm = norm < 12 ? 'AM' : 'PM';
+    const disp = norm % 12 === 0 ? 12 : norm % 12;
+    return `${disp}:00 ${ampm}`;
+}
+
+// Individual 1-hour slot labels derived from slot_hour values on booking_dates.
+const nightSlotLabels = computed(() =>
+    [...new Set(props.booking.dates.filter(d => d.slot_hour !== null).map(d => d.slot_hour))]
+        .sort((a, b) => a - b)
+        .map(h => `${hourLabel(h)} – ${hourLabel(h + 1)}`)
+);
 function formatDateTime(d) {
     return d ? new Date(d).toLocaleString('en-GB', {
         day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -104,20 +123,17 @@ const isActive = (status) => !['cancelled', 'rejected'].includes(status);
                             <dd class="text-right font-medium">{{ SLOT_LABELS[booking.slot_type] ?? booking.slot_type }}</dd>
                         </template>
 
-                        <template v-if="booking.hours">
-                            <dt class="text-ink-700/60">Duration</dt>
+                        <dt class="text-ink-700/60">Date(s)</dt>
+                        <dd class="text-right font-medium">
+                            <span v-for="d in uniqueDates" :key="d.date" class="block">{{ formatDate(d.date) }}</span>
+                        </dd>
+
+                        <template v-if="nightSlotLabels.length > 0">
+                            <dt class="text-ink-700/60">Night slot(s)</dt>
                             <dd class="text-right font-medium">
-                                {{ booking.hours }} hr(s)
-                                <span v-if="booking.start_time" class="text-ink-700/50">
-                                    ({{ booking.start_time }} – {{ booking.end_time }})
-                                </span>
+                                <span v-for="label in nightSlotLabels" :key="label" class="block font-mono text-xs">{{ label }}</span>
                             </dd>
                         </template>
-
-                        <dt class="text-ink-700/60">Dates</dt>
-                        <dd class="text-right font-medium">
-                            <span v-for="d in booking.dates" :key="d.id" class="block">{{ formatDate(d.date) }}</span>
-                        </dd>
 
                         <template v-if="booking.chair_count">
                             <dt class="text-ink-700/60">Chairs</dt>

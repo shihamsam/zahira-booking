@@ -26,7 +26,9 @@ Route::get('/grounds/{slug}', fn ($slug) => redirect("/facilities/{$slug}", 301)
 Route::get('/grounds/{slug}/availability', fn ($slug) => redirect("/facilities/{$slug}/availability", 301));
 
 Route::get('/facilities/{resource:slug}', [BookingController::class, 'show'])->name('facilities.show');
+Route::get('/facilities/{resource:slug}/book', [BookingController::class, 'booking'])->name('facilities.book');
 Route::get('/facilities/{resource:slug}/availability', [BookingController::class, 'availability'])->name('facilities.availability');
+Route::get('/facilities/{resource:slug}/timeslots', [BookingController::class, 'timeslots'])->name('facilities.timeslots');
 Route::post('/facilities/{resource:slug}/bookings', [BookingController::class, 'store'])->name('bookings.store');
 Route::get('/bookings/{referenceNo}/confirmation', [BookingController::class, 'confirmation'])->name('bookings.confirmation');
 

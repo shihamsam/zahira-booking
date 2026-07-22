@@ -14,7 +14,7 @@ const flashSuccess = computed(() => page.props.flash?.success);
 
 const SLOT_LABELS = {
     full_day:     'Full Day',
-    daytime:      'Daytime (8:30 AM – 6:30 PM)',
+    daytime:      'Daytime (6:00 AM – 6:00 PM)',
     night_4lights:'Night — 4 Lights',
     night_2lights:'Night — 2 Lights',
 };

@@ -79,9 +79,10 @@ class BookingService
         array $dates,
         string $fullName,
         string $mobileNumber,
-        string $nic,
-        string $purpose,
+        ?string $nic,
+        ?string $purpose,
         string $slotType,
+        array $slotHours = [],
         ?UploadedFile $receiptFile = null,
         ?string $email = null,
         ?string $startTime = null,
@@ -92,22 +93,40 @@ class BookingService
     ): Booking {
         $dates = collect($dates)->unique()->sort()->values()->all();
 
+        $isNightSlot = in_array($slotType, ['night_4lights', 'night_2lights'], true);
+
+        // Use the exact hours the user selected — never recompute as a contiguous range.
+        $nightSlotHours = $isNightSlot ? array_values(array_unique($slotHours)) : [];
+
         return DB::transaction(function () use (
             $resource, $dates, $fullName, $mobileNumber, $nic, $purpose,
             $slotType, $receiptFile, $email, $startTime, $endTime, $hours,
-            $chairCount, $soundSystemRequested,
+            $chairCount, $soundSystemRequested, $isNightSlot, $nightSlotHours,
         ) {
-            // Lock existing slot rows so concurrent requests for the same
-            // resource + date + slot must wait.
-            $taken = BookingDate::query()
-                ->where('resource_id', $resource->id)
-                ->whereIn('date', $dates)
-                ->where('slot_type', $slotType)
-                ->whereHas('booking', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected'])->lockForUpdate())
-                ->lockForUpdate()
-                ->pluck('date')
-                ->map(fn ($d) => $d->format('Y-m-d'))
-                ->all();
+            // Conflict check — night slots checked at the individual hour level;
+            // daytime / full-day checked at the date level (existing behaviour).
+            if ($isNightSlot && ! empty($nightSlotHours)) {
+                $taken = BookingDate::query()
+                    ->where('resource_id', $resource->id)
+                    ->whereIn('date', $dates)
+                    ->whereIn('slot_type', ['night_4lights', 'night_2lights'])
+                    ->whereIn('slot_hour', $nightSlotHours)
+                    ->whereHas('booking', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected'])->lockForUpdate())
+                    ->lockForUpdate()
+                    ->pluck('date')
+                    ->map(fn ($d) => $d->format('Y-m-d'))
+                    ->all();
+            } else {
+                $taken = BookingDate::query()
+                    ->where('resource_id', $resource->id)
+                    ->whereIn('date', $dates)
+                    ->where('slot_type', $slotType)
+                    ->whereHas('booking', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected'])->lockForUpdate())
+                    ->lockForUpdate()
+                    ->pluck('date')
+                    ->map(fn ($d) => $d->format('Y-m-d'))
+                    ->all();
+            }
 
             if (! empty($taken)) {
                 throw new DatesUnavailableException($taken);
@@ -151,13 +170,30 @@ class BookingService
                 'receipt_path'           => $receiptPath,
             ]);
 
-            foreach ($dates as $date) {
-                $booking->dates()->create([
-                    'resource_id' => $resource->id,
-                    'date'        => $date,
-                    'slot_type'   => $slotType,
-                    'unit_price'  => $unitPrice,
-                ]);
+            if ($isNightSlot && ! empty($nightSlotHours)) {
+                // One row per hour so availability can be checked at the hour level.
+                $hourlyRate = $this->pricing->unitPrice($resource, $slotType, 1);
+                foreach ($dates as $date) {
+                    foreach ($nightSlotHours as $slotHour) {
+                        $booking->dates()->create([
+                            'resource_id' => $resource->id,
+                            'date'        => $date,
+                            'slot_type'   => $slotType,
+                            'slot_hour'   => $slotHour,
+                            'unit_price'  => $hourlyRate,
+                        ]);
+                    }
+                }
+            } else {
+                foreach ($dates as $date) {
+                    $booking->dates()->create([
+                        'resource_id' => $resource->id,
+                        'date'        => $date,
+                        'slot_type'   => $slotType,
+                        'slot_hour'   => null,
+                        'unit_price'  => $unitPrice,
+                    ]);
+                }
             }
 
             $this->notifyAdmins($booking->fresh(['resource', 'dates']));
