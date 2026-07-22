@@ -10,7 +10,9 @@ const props = defineProps({
 });
 
 const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
+const flashSuccess   = computed(() => page.props.flash?.success);
+const modalDismissed = ref(false);
+const showModal      = computed(() => !!flashSuccess.value && !modalDismissed.value);
 
 const SLOT_LABELS = {
     full_day:     'Full Day',
@@ -144,14 +146,6 @@ const nightSlotLabels = computed(() =>
                     <!-- LEFT — Booking summary -->
                     <div class="lg:w-96 xl:w-[420px] flex-shrink-0 overflow-y-auto px-4 sm:px-6 py-5">
 
-                        <!-- Success banner -->
-                        <div
-                            v-if="flashSuccess"
-                            class="mb-4 rounded-md bg-pitch-50 border text-pitch-900 px-3 py-2.5 text-sm font-medium neon-glow-border"
-                        >
-                            {{ flashSuccess }}
-                        </div>
-
                         <p class="font-mono text-[10px] uppercase tracking-widest text-pitch-600 mb-3">Booking details</p>
 
                         <dl class="grid grid-cols-2 gap-y-2.5 text-sm">
@@ -264,5 +258,44 @@ const nightSlotLabels = computed(() =>
             </template>
 
         </div>
+
+        <!-- ── Success modal ──────────────────────────────────────────────── -->
+        <Transition
+            enter-from-class="opacity-0"
+            enter-active-class="transition-opacity duration-200"
+            leave-to-class="opacity-0"
+            leave-active-class="transition-opacity duration-200"
+        >
+            <div
+                v-if="showModal"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pitch-900/50 backdrop-blur-sm"
+                @click.self="modalDismissed = true"
+            >
+                <div class="bg-white rounded-card shadow-2xl w-full max-w-sm p-8 text-center">
+
+                    <!-- Green check circle -->
+                    <div class="mx-auto mb-5 w-16 h-16 rounded-full bg-pitch-50 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-pitch-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+
+                    <h2 class="font-display font-bold text-xl text-pitch-900 mb-2">Receipt uploaded</h2>
+
+                    <p class="text-sm text-ink-700/70 leading-relaxed mb-6">
+                        {{ flashSuccess }}
+                    </p>
+
+                    <button
+                        type="button"
+                        class="btn-primary w-full"
+                        @click="modalDismissed = true"
+                    >
+                        Got it
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
     </PublicLayout>
 </template>
