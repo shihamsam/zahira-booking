@@ -34,6 +34,7 @@ class GoogleCalendarService
         $client = new Client();
         $client->setAuthConfig($credentialsPath);
         $client->addScope(Calendar::CALENDAR_EVENTS);
+        $client->fetchAccessTokenWithAssertion();
 
         $this->calendar = new Calendar($client);
 
