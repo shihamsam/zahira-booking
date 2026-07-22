@@ -165,11 +165,11 @@ const derivedHours = computed(() => {
 // ── Pricing ──────────────────────────────────────────────────────────────────
 
 const unitPrice = computed(() => {
+    if (isAzwarHall.value) return props.slots['full_day']?.rate ?? 0;
     const period = selectedPeriod.value;
     if (!period) return 0;
-    if (isAzwarHall.value)     return props.slots['full_day']?.rate ?? 0;
-    if (period === 'daytime')  return props.slots['daytime']?.rate ?? 0;
-    if (period === 'night')    return (props.slots[lightsOption.value]?.rate ?? 0) * Math.max(1, derivedHours.value);
+    if (period === 'daytime') return props.slots['daytime']?.rate ?? 0;
+    if (period === 'night')   return (props.slots[lightsOption.value]?.rate ?? 0) * Math.max(1, derivedHours.value);
     return 0;
 });
 
