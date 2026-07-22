@@ -46,11 +46,31 @@ class BlockedDateController extends Controller
             'reason'      => ['nullable', 'string', 'max:255'],
         ]);
 
+        $resourceId = $validated['resource_id'] ?? null;
+
+        // Refuse to block dates that already have active (pending/confirmed) bookings.
+        $booked = BookingDate::query()
+            ->whereIn('date', $validated['dates'])
+            ->when($resourceId, fn ($q) => $q->where('resource_id', $resourceId))
+            ->whereHas('booking', fn ($q) => $q->whereNotIn('status', ['cancelled', 'rejected']))
+            ->pluck('date')
+            ->map(fn ($d) => $d->format('Y-m-d'))
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($booked)) {
+            $scope = $resourceId ? '' : ' (across all facilities)';
+            return back()
+                ->withErrors(['dates' => 'The following date(s) have active bookings' . $scope . ' and cannot be blocked: ' . implode(', ', $booked)])
+                ->withInput();
+        }
+
         foreach ($validated['dates'] as $date) {
             BlockedDate::firstOrCreate(
                 [
                     'date'        => $date,
-                    'resource_id' => $validated['resource_id'] ?? null,
+                    'resource_id' => $resourceId,
                 ],
                 [
                     'reason'     => $validated['reason'] ?? null,

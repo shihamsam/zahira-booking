@@ -50,18 +50,17 @@ const nightSlots = computed(() => {
 const selectedDates = ref([]);
 const selectedDate  = computed(() => selectedDates.value[0] ?? null);
 
-// For the calendar, merge night_4lights + night_2lights unavailability so both
-// light options block the same date (physical constraint).
 const unavailableForCalendar = computed(() => {
     if (isGround.value) {
-        const daytime = new Set(props.unavailableDatesBySlot['daytime'] ?? []);
-        const night4  = new Set(props.unavailableDatesBySlot['night_4lights'] ?? []);
-        const night2  = new Set(props.unavailableDatesBySlot['night_2lights'] ?? []);
-        // A date is calendar-unavailable only when daytime AND both night
-        // options are fully booked (nothing left to book on that date).
-        return [...daytime].filter(d => night4.has(d) && night2.has(d));
+        // Night slots are tracked per-hour: a date in unavailableDatesBySlot['night_*']
+        // means at least one hour is booked, NOT that all 12 are taken. We cannot
+        // determine full-night unavailability without a per-date fetch, so we never
+        // pre-gray calendar dates for the ground. The slot grid shows exact availability
+        // after the user selects a date.
+        return [];
     }
     if (isAzwarHall.value) {
+        // Azwar Hall uses a single full_day slot — one booking = whole day taken.
         return props.unavailableDatesBySlot['full_day'] ?? [];
     }
     return [];
@@ -245,21 +244,58 @@ const canReview = computed(() => {
 
 <template>
     <PublicLayout>
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <!--
+            Desktop : fills the space between the nav header and viewport bottom.
+                      Each panel scrolls independently — the page itself never scrolls.
+            Mobile  : natural document flow with full vertical scroll.
+        -->
+        <div class="flex flex-col lg:h-[calc(100vh-9rem)] lg:overflow-hidden">
 
-            <!-- Page header -->
-            <p class="font-mono text-xs uppercase tracking-widest text-pitch-600 mb-2">Booking</p>
-            <h1 class="font-display font-bold text-2xl sm:text-3xl text-pitch-900 mb-1">{{ resource.name }}</h1>
-            <p class="text-ink-700/70 max-w-xl mb-8">{{ resource.description }}</p>
+            <!-- ── Slim title bar ─────────────────────────────────────────────── -->
+            <div class="flex-shrink-0 bg-white border-b border-chalk-200 px-4 sm:px-6 py-2.5">
+                <div class="max-w-7xl mx-auto flex items-center gap-4">
 
-            <!-- Two-panel layout -->
-            <div class="grid lg:grid-cols-5 gap-8">
+                    <!-- Facility -->
+                    <div class="min-w-0 flex-1">
+                        <p class="font-mono text-[10px] uppercase tracking-widest text-pitch-600 leading-none mb-0.5">Booking</p>
+                        <h1 class="font-display font-bold text-base sm:text-lg text-pitch-900 leading-tight truncate">
+                            {{ resource.name }}
+                        </h1>
+                    </div>
 
-                <!-- Left: Calendar -->
-                <div class="lg:col-span-2">
-                    <h2 class="font-display font-semibold uppercase tracking-wide text-sm text-pitch-900 mb-3">
+                    <!-- User identity — hidden on very small screens -->
+                    <div v-if="form.full_name || form.mobile_number" class="hidden sm:flex items-center gap-3 flex-shrink-0">
+                        <div class="w-px h-7 bg-chalk-200"></div>
+                        <div class="text-right">
+                            <p class="font-display font-semibold text-sm text-pitch-900 leading-tight">
+                                {{ form.full_name }}
+                            </p>
+                            <p class="font-mono text-[11px] text-ink-700/55 leading-tight">
+                                {{ form.mobile_number }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Back -->
+                    <div class="w-px h-7 bg-chalk-200 hidden sm:block flex-shrink-0"></div>
+                    <a href="/" class="flex-shrink-0 text-xs text-ink-700/55 hover:text-pitch-900 transition-colors font-medium">
+                        ← Back
+                    </a>
+                </div>
+            </div>
+
+            <!-- ── Two-panel content area ─────────────────────────────────────── -->
+            <div class="flex-1 min-h-0 overflow-hidden">
+            <div class="max-w-7xl mx-auto h-full flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-chalk-200 overflow-hidden">
+
+                <!-- LEFT — Calendar
+                     Desktop : fixed width, independently scrollable (though rarely needed)
+                     Mobile  : full width, natural height
+                -->
+                <div class="lg:w-80 xl:w-96 flex-shrink-0 overflow-y-auto px-4 sm:px-6 py-5">
+                    <p class="font-mono text-[10px] uppercase tracking-widest text-pitch-600 mb-3">
                         1. Select a date
-                    </h2>
+                    </p>
                     <Calendar
                         v-model="selectedDates"
                         :unavailable-dates="unavailableForCalendar"
@@ -269,27 +305,36 @@ const canReview = computed(() => {
                     />
                 </div>
 
-                <!-- Right: Time slots + options -->
-                <div class="lg:col-span-3">
+                <!-- RIGHT — Time slots + options
+                     Desktop : fills remaining width, independently scrollable
+                     Mobile  : full width, natural height
+                -->
+                <div class="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 py-5">
 
-                    <!-- Placeholder when no date selected -->
-                    <div v-if="!selectedDate" class="flex items-center justify-center h-48 rounded-card border-2 border-dashed border-chalk-300 text-ink-700/40 text-sm">
-                        Select a date on the calendar to see available time slots.
+                    <!-- Placeholder -->
+                    <div
+                        v-if="!selectedDate"
+                        class="h-full min-h-[200px] flex flex-col items-center justify-center text-center gap-3 text-ink-700/40"
+                    >
+                        <svg class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-sm">Select a date on the calendar<br/>to see available time slots.</p>
                     </div>
 
                     <template v-else>
 
-                        <h2 class="font-display font-semibold uppercase tracking-wide text-sm text-pitch-900 mb-4">
-                            2. Select time slot(s) &mdash;
-                            <span class="normal-case font-normal text-ink-700/70">{{ formatDate(selectedDate) }}</span>
-                        </h2>
+                        <p class="font-mono text-[10px] uppercase tracking-widest text-pitch-600 mb-3">
+                            2. Select time slot(s) —
+                            <span class="normal-case font-normal text-ink-700/60">{{ formatDate(selectedDate) }}</span>
+                        </p>
 
                         <!-- ── Zahira Green Ground ── -->
                         <template v-if="isGround">
 
                             <!-- Daytime — single tile -->
-                            <div class="mb-5">
-                                <div class="flex items-center gap-2 mb-2">
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2 mb-1.5">
                                     <span class="text-xs font-semibold uppercase tracking-wide text-ink-700/60">Daytime</span>
                                     <span class="text-xs font-mono text-floodlight-600">Rs. {{ (slots['daytime']?.rate ?? 0).toLocaleString() }} flat</span>
                                     <span v-if="daytimeUnavailable" class="text-xs text-clay-600 font-medium">Fully booked</span>
@@ -298,7 +343,7 @@ const canReview = computed(() => {
                                     type="button"
                                     :disabled="daytimeUnavailable"
                                     @click="toggleDaytime"
-                                    class="w-full px-4 py-3 rounded-md border text-sm font-medium text-left transition-colors"
+                                    class="w-full px-4 py-2.5 rounded-md border text-sm font-medium text-left transition-colors"
                                     :class="daytimeUnavailable
                                         ? 'bg-chalk-100 text-ink-700/30 line-through border-chalk-200 cursor-not-allowed'
                                         : daytimeSelected
@@ -311,19 +356,19 @@ const canReview = computed(() => {
 
                             <!-- Night — 1-hour tiles -->
                             <div class="mb-4">
-                                <div class="flex items-center gap-2 mb-2">
+                                <div class="flex items-center gap-2 mb-1.5">
                                     <span class="text-xs font-semibold uppercase tracking-wide text-ink-700/60">Night</span>
                                     <span class="text-xs font-mono text-floodlight-600">Rs. {{ (slots[lightsOption]?.rate ?? 0).toLocaleString() }}/hr</span>
                                     <span v-if="nightFullyBooked" class="text-xs text-clay-600 font-medium">Fully booked</span>
                                 </div>
-                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                <div class="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-6 gap-1.5">
                                     <button
                                         v-for="slot in nightSlots"
                                         :key="slot.hour"
                                         type="button"
                                         :disabled="bookedNightHours.has(slot.hour)"
                                         @click="toggleHour(slot.hour)"
-                                        class="px-2 py-2 rounded-md border text-xs font-mono text-center transition-colors"
+                                        class="px-1.5 py-2 rounded-md border text-[11px] font-mono text-center transition-colors"
                                         :class="bookedNightHours.has(slot.hour)
                                             ? 'bg-chalk-100 text-ink-700/30 line-through cursor-not-allowed border-chalk-200'
                                             : selectedHours.includes(slot.hour)
@@ -335,10 +380,10 @@ const canReview = computed(() => {
                                 </div>
                             </div>
 
-                            <!-- Lights option (shown when night slots selected) -->
-                            <div v-if="selectedPeriod === 'night'" class="mb-4 card p-4 bg-pitch-50">
+                            <!-- Lights option -->
+                            <div v-if="selectedPeriod === 'night'" class="mb-4 rounded-card bg-pitch-50 border border-pitch-100 px-4 py-3">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-pitch-900 mb-2">Lighting option</p>
-                                <div class="flex flex-wrap gap-3">
+                                <div class="flex flex-wrap gap-4">
                                     <label class="flex items-center gap-2 cursor-pointer">
                                         <input type="radio" v-model="lightsOption" value="night_4lights" class="text-pitch-900" />
                                         <span class="text-sm text-ink-700">
@@ -359,9 +404,9 @@ const canReview = computed(() => {
 
                         <!-- ── Azwar Hall ── -->
                         <template v-if="isAzwarHall">
-                            <div class="mb-5">
+                            <div class="mb-4">
                                 <div
-                                    class="px-4 py-3 rounded-md border text-sm font-medium transition-colors"
+                                    class="px-4 py-3 rounded-md border text-sm font-medium"
                                     :class="fullDayUnavailable
                                         ? 'bg-chalk-100 text-ink-700/30 line-through border-chalk-200 cursor-not-allowed'
                                         : 'bg-pitch-900 text-chalk-50 border-pitch-900'"
@@ -372,7 +417,6 @@ const canReview = computed(() => {
                                 <p v-if="fullDayUnavailable" class="text-xs text-clay-600 mt-2">This date is fully booked.</p>
                             </div>
 
-                            <!-- Azwar Hall add-ons -->
                             <div v-if="!fullDayUnavailable" class="card p-4 mb-4 space-y-3">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-pitch-900">Add-ons</p>
                                 <div>
@@ -388,123 +432,112 @@ const canReview = computed(() => {
                             </div>
                         </template>
 
-                        <!-- Pricing summary -->
-                        <div v-if="(isGround && selectedPeriod) || (isAzwarHall && !fullDayUnavailable)" class="flex items-center justify-between py-3 border-t border-chalk-200 mb-4">
-                            <span class="text-sm text-ink-700/70">Estimated total</span>
-                            <span class="font-display font-semibold text-lg text-pitch-900">
-                                Rs. {{ totalAmount.toLocaleString() }}
-                            </span>
+                        <!-- Pricing + CTA — pinned to bottom on desktop via sticky -->
+                        <div class="mt-4 pt-4 border-t border-chalk-200">
+                            <div v-if="(isGround && selectedPeriod) || (isAzwarHall && !fullDayUnavailable)" class="flex items-center justify-between mb-3">
+                                <span class="text-sm text-ink-700/70">Estimated total</span>
+                                <span class="font-display font-semibold text-lg text-pitch-900">
+                                    Rs. {{ totalAmount.toLocaleString() }}
+                                </span>
+                            </div>
+                            <button
+                                v-if="canReview"
+                                type="button"
+                                class="btn-primary w-full py-3 text-sm"
+                                @click="openReview"
+                            >
+                                Confirm Booking
+                            </button>
                         </div>
-
-                        <!-- Confirm Booking button -->
-                        <button
-                            v-if="canReview"
-                            type="button"
-                            class="btn-primary w-full py-3 text-base"
-                            @click="openReview"
-                        >
-                            Confirm Booking
-                        </button>
 
                     </template>
                 </div>
             </div>
-
-            <!-- ── Inline review / summary step ───────────────────────────────── -->
-            <div
-                v-if="showReview"
-                class="fixed inset-0 bg-pitch-900/60 z-50 flex items-end sm:items-center justify-center p-4"
-                @click.self="showReview = false"
-            >
-                <div class="bg-white rounded-card w-full max-w-lg p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="font-display font-bold text-lg text-pitch-900">Booking Summary</h2>
-                        <button type="button" @click="showReview = false" class="text-ink-700/40 hover:text-ink-700 text-2xl leading-none">&times;</button>
-                    </div>
-
-                    <dl class="grid grid-cols-2 gap-y-2 text-sm mb-5">
-                        <dt class="text-ink-700/60">Name</dt>
-                        <dd class="text-right font-medium">{{ form.full_name }}</dd>
-
-                        <dt class="text-ink-700/60">Phone</dt>
-                        <dd class="text-right font-medium">{{ form.mobile_number }}</dd>
-
-                        <dt class="text-ink-700/60">Facility</dt>
-                        <dd class="text-right font-medium">{{ resource.name }}</dd>
-
-                        <dt class="text-ink-700/60">Date</dt>
-                        <dd class="text-right font-medium">{{ formatDate(selectedDate) }}</dd>
-
-                        <template v-if="isGround && selectedPeriod">
-                            <dt class="text-ink-700/60">Time slot(s)</dt>
-                            <dd class="text-right font-medium">
-                                <span v-for="lbl in selectedSlotLabels" :key="lbl" class="block text-xs font-mono">{{ lbl }}</span>
-                            </dd>
-
-                            <template v-if="selectedPeriod === 'night'">
-                                <dt class="text-ink-700/60">Lighting</dt>
-                                <dd class="text-right font-medium">
-                                    {{ lightsOption === 'night_4lights' ? '4 Lights' : '2 Lights' }}
-                                </dd>
-                            </template>
-                        </template>
-
-                        <template v-if="isAzwarHall">
-                            <dt class="text-ink-700/60">Time slot</dt>
-                            <dd class="text-right font-medium">Full Day</dd>
-
-                            <template v-if="Number(chairCount) > 0">
-                                <dt class="text-ink-700/60">Chairs</dt>
-                                <dd class="text-right font-medium">{{ chairCount }}</dd>
-                            </template>
-
-                            <template v-if="soundSystem">
-                                <dt class="text-ink-700/60">Sound system</dt>
-                                <dd class="text-right font-medium">Requested</dd>
-                            </template>
-                        </template>
-
-                        <dt class="text-ink-700/60 font-semibold">Amount to pay</dt>
-                        <dd class="text-right font-display font-bold text-pitch-900 text-base">
-                            Rs. {{ totalAmount.toLocaleString() }}
-                        </dd>
-                    </dl>
-
-                    <!-- Booking terms -->
-                    <div class="bg-floodlight-500/10 border border-floodlight-500/30 rounded-md p-3 mb-4 text-xs text-ink-700 leading-relaxed">
-                        <p class="font-semibold mb-1 text-floodlight-700">Booking Terms</p>
-                        Booking once confirmed cannot be cancelled within 24 hours of the slot time.
-                    </div>
-
-                    <!-- I agree checkbox -->
-                    <div class="flex items-start gap-3 mb-5">
-                        <input
-                            id="agree-terms"
-                            v-model="agreedToTerms"
-                            type="checkbox"
-                            class="mt-0.5 h-4 w-4 rounded border-chalk-300 text-pitch-900"
-                        />
-                        <label for="agree-terms" class="text-sm text-ink-700 cursor-pointer">
-                            I agree to the terms and conditions
-                        </label>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="btn-primary w-full py-3 text-base"
-                        :disabled="!agreedToTerms || form.processing"
-                        @click="submit"
-                    >
-                        {{ form.processing ? 'Submitting...' : 'Submit Booking' }}
-                    </button>
-
-                    <p v-if="form.errors?.dates || form.errors?.slot_type" class="text-clay-600 text-xs mt-2 text-center">
-                        {{ form.errors?.dates || form.errors?.slot_type }}
-                    </p>
-                </div>
             </div>
-
         </div>
+
+        <!-- ── Review / summary modal (unchanged) ─────────────────────────── -->
+        <div
+            v-if="showReview"
+            class="fixed inset-0 bg-pitch-900/60 z-50 flex items-end sm:items-center justify-center p-4"
+            @click.self="showReview = false"
+        >
+            <div class="bg-white rounded-card w-full max-w-lg p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-display font-bold text-lg text-pitch-900">Booking Summary</h2>
+                    <button type="button" @click="showReview = false" class="text-ink-700/40 hover:text-ink-700 text-2xl leading-none">&times;</button>
+                </div>
+
+                <dl class="grid grid-cols-2 gap-y-2 text-sm mb-5">
+                    <dt class="text-ink-700/60">Name</dt>
+                    <dd class="text-right font-medium">{{ form.full_name }}</dd>
+
+                    <dt class="text-ink-700/60">Phone</dt>
+                    <dd class="text-right font-medium">{{ form.mobile_number }}</dd>
+
+                    <dt class="text-ink-700/60">Facility</dt>
+                    <dd class="text-right font-medium">{{ resource.name }}</dd>
+
+                    <dt class="text-ink-700/60">Date</dt>
+                    <dd class="text-right font-medium">{{ formatDate(selectedDate) }}</dd>
+
+                    <template v-if="isGround && selectedPeriod">
+                        <dt class="text-ink-700/60">Time slot(s)</dt>
+                        <dd class="text-right font-medium">
+                            <span v-for="lbl in selectedSlotLabels" :key="lbl" class="block text-xs font-mono">{{ lbl }}</span>
+                        </dd>
+                        <template v-if="selectedPeriod === 'night'">
+                            <dt class="text-ink-700/60">Lighting</dt>
+                            <dd class="text-right font-medium">{{ lightsOption === 'night_4lights' ? '4 Lights' : '2 Lights' }}</dd>
+                        </template>
+                    </template>
+
+                    <template v-if="isAzwarHall">
+                        <dt class="text-ink-700/60">Time slot</dt>
+                        <dd class="text-right font-medium">Full Day</dd>
+                        <template v-if="Number(chairCount) > 0">
+                            <dt class="text-ink-700/60">Chairs</dt>
+                            <dd class="text-right font-medium">{{ chairCount }}</dd>
+                        </template>
+                        <template v-if="soundSystem">
+                            <dt class="text-ink-700/60">Sound system</dt>
+                            <dd class="text-right font-medium">Requested</dd>
+                        </template>
+                    </template>
+
+                    <dt class="text-ink-700/60 font-semibold">Amount to pay</dt>
+                    <dd class="text-right font-display font-bold text-pitch-900 text-base">
+                        Rs. {{ totalAmount.toLocaleString() }}
+                    </dd>
+                </dl>
+
+                <div class="bg-floodlight-500/10 border border-floodlight-500/30 rounded-md p-3 mb-4 text-xs text-ink-700 leading-relaxed">
+                    <p class="font-semibold mb-1 text-floodlight-700">Booking Terms</p>
+                    Booking once confirmed cannot be cancelled within 24 hours of the slot time.
+                </div>
+
+                <div class="flex items-start gap-3 mb-5">
+                    <input id="agree-terms" v-model="agreedToTerms" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-chalk-300 text-pitch-900" />
+                    <label for="agree-terms" class="text-sm text-ink-700 cursor-pointer">
+                        I agree to the terms and conditions
+                    </label>
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-primary w-full py-3 text-base"
+                    :disabled="!agreedToTerms || form.processing"
+                    @click="submit"
+                >
+                    {{ form.processing ? 'Submitting...' : 'Submit Booking' }}
+                </button>
+
+                <p v-if="form.errors?.dates || form.errors?.slot_type" class="text-clay-600 text-xs mt-2 text-center">
+                    {{ form.errors?.dates || form.errors?.slot_type }}
+                </p>
+            </div>
+        </div>
+
     </PublicLayout>
 </template>

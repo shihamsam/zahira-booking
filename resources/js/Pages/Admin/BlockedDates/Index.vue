@@ -13,22 +13,22 @@ const props = defineProps({
 // ── Filter resource for the calendar view ─────────────────────────────────────
 const calendarResourceId = ref('');
 
-// Dates already blocked for the currently viewed scope (shown greyed/strikethrough).
-const calendarUnavailable = computed(() => {
-    const rid = calendarResourceId.value ? Number(calendarResourceId.value) : null;
-    return props.blockedDates
-        .filter(b => b.resource_id === null || b.resource_id === rid)
-        .map(b => b.date.slice(0, 10));
-});
-
-// Active booking dates for the currently viewed scope (shown in amber — informational).
-// When "All facilities" is selected, show the union across all resources.
+// Booked dates for the currently viewed resource scope.
 const calendarBooked = computed(() => {
     if (!calendarResourceId.value) {
-        // Flatten all resources' booked dates
         return Object.values(props.bookedByResource).flat();
     }
     return props.bookedByResource[calendarResourceId.value] ?? [];
+});
+
+// Dates that cannot be selected: already-blocked dates PLUS dates with active bookings.
+// Booked dates cannot be blocked, so they are greyed-out rather than shown in amber.
+const calendarUnavailable = computed(() => {
+    const rid = calendarResourceId.value ? Number(calendarResourceId.value) : null;
+    const blocked = props.blockedDates
+        .filter(b => b.resource_id === null || b.resource_id === rid)
+        .map(b => b.date.slice(0, 10));
+    return [...new Set([...blocked, ...calendarBooked.value])];
 });
 
 // ── Form ──────────────────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ const filteredList = computed(() => {
                         <option v-for="r in resources" :key="r.id" :value="String(r.id)">{{ r.name }}</option>
                     </select>
                     <p class="text-xs text-ink-700/50 w-full">
-                        Greyed dates are already blocked. Click free dates to select them.
+                        Greyed dates are already blocked or have active bookings — these cannot be blocked.
                     </p>
                 </div>
 
@@ -113,7 +113,6 @@ const filteredList = computed(() => {
                 <Calendar
                     v-model="form.dates"
                     :unavailable-dates="calendarUnavailable"
-                    :booked-dates="calendarBooked"
                 />
             </div>
 
