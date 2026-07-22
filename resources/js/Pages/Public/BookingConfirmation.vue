@@ -95,6 +95,7 @@ function openWhatsApp() {
                             {{ booking.resource.name }}
                         </h1>
                     </div>
+                    <StatusBadge :status="booking.status" class="flex-shrink-0" />
                     <div class="w-px h-7 bg-chalk-200 flex-shrink-0 hidden sm:block"></div>
                     <Link href="/" class="flex-shrink-0 text-xs text-ink-700/55 hover:text-pitch-900 transition-colors font-medium hidden sm:block">
                         ← Home
@@ -108,35 +109,6 @@ function openWhatsApp() {
 
                 <!-- LEFT — Booking summary -->
                 <div class="lg:w-96 xl:w-[420px] flex-shrink-0 overflow-y-auto px-4 sm:px-6 py-5">
-
-                    <!-- Prominent reference block -->
-                    <div class="bg-pitch-900 rounded-card px-4 py-4 mb-5">
-                        <p class="font-mono text-[10px] uppercase tracking-widest text-chalk-50/50 mb-1">
-                            Booking Reference
-                        </p>
-                        <div class="flex items-center gap-2 mb-3">
-                            <p class="font-mono font-bold text-xl text-chalk-50 tracking-widest">
-                                {{ booking.reference_no }}
-                            </p>
-                            <button
-                                type="button"
-                                @click="copyReference"
-                                :title="copied ? 'Copied!' : 'Copy reference number'"
-                                class="flex-shrink-0 p-1 rounded transition-colors"
-                                :class="copied ? 'text-floodlight-400' : 'text-chalk-50/40 hover:text-chalk-50'"
-                            >
-                                <!-- Clipboard icon -->
-                                <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
-                                </svg>
-                                <!-- Checkmark icon -->
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <StatusBadge :status="booking.status" />
-                    </div>
 
                     <p class="font-mono text-[10px] uppercase tracking-widest text-pitch-600 mb-3">Booking details</p>
 
@@ -208,9 +180,36 @@ function openWhatsApp() {
                         </template>
 
                         <template v-else>
-                            <p class="font-mono text-[10px] uppercase tracking-widest text-floodlight-600 mb-2">Receipt not yet uploaded</p>
-                            <p class="text-sm text-ink-700 mb-3">
+                            <p class="font-mono text-[10px] uppercase tracking-widest text-floodlight-600 mb-3">Receipt not yet uploaded</p>
+
+                            <!-- Reference line with copy button -->
+                            <div class="flex items-center gap-2 mb-3">
+                                <p class="font-mono font-bold text-lg text-pitch-900 tracking-widest leading-none">
+                                    {{ booking.reference_no }}
+                                </p>
+                                <button
+                                    type="button"
+                                    @click="copyReference"
+                                    :title="copied ? 'Copied!' : 'Copy reference number'"
+                                    class="flex-shrink-0 p-1 rounded transition-colors"
+                                    :class="copied ? 'text-pitch-600' : 'text-ink-700/30 hover:text-ink-700'"
+                                >
+                                    <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                                    </svg>
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <p class="text-sm text-ink-700 mb-2">
                                 Your booking is reserved. Make the bank deposit and upload your receipt to complete the process.
+                            </p>
+                            <p class="text-sm text-ink-700 mb-4">
+                                When making the transfer, enter the reference number above in the bank's
+                                <strong class="font-semibold text-pitch-900">Transfer / Deposit Reference</strong>
+                                field so we can match your payment.
                             </p>
                             <Link :href="`/upload-receipt/${booking.reference_no}`" class="btn-primary inline-block text-sm py-2">
                                 Upload receipt now
@@ -253,7 +252,7 @@ function openWhatsApp() {
                     <!-- Footer links -->
                     <div class="pt-3 border-t border-chalk-200 space-y-1.5">
                         <p class="text-xs text-ink-700/45 text-center">
-                            Save your reference number — you'll need it if you contact us.
+                            Keep your reference number handy — you'll need it for any follow-up.
                         </p>
                         <Link
                             :href="`/upload-receipt/${booking.reference_no}`"

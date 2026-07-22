@@ -137,12 +137,12 @@ function proceed() {
              Mobile  : full-width, natural height, single-col inputs
              Desktop : fixed-height column, side-by-side inputs
         ═══════════════════════════════════════════════════════════ -->
-        <div class="lg:w-[58%] bg-white flex flex-col
+        <div class="lg:w-[58%] bg-white flex flex-col lg:justify-center
                     overflow-y-auto lg:overflow-hidden
                     px-6 py-7
                     lg:px-12 lg:py-10">
 
-            <div class="w-full max-w-md mx-auto flex flex-col flex-1">
+            <div class="w-full max-w-md mx-auto flex flex-col">
 
                 <!-- Section header -->
                 <div class="mb-5 lg:mb-6">
@@ -253,7 +253,7 @@ function proceed() {
                 </div>
 
                 <!-- CTA -->
-                <div class="mt-4 lg:mt-auto pt-2">
+                <div class="mt-4 pt-2">
                     <p
                         v-if="selectedId && !isValid"
                         class="text-[11px] text-ink-700/60 mb-2"
