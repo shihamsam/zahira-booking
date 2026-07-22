@@ -13,7 +13,7 @@ defineProps({
             <div class="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
                 <p class="font-mono text-floodlight-500 text-xs tracking-widest uppercase mb-3">Zahira College &middot; Book a facility online</p>
                 <h1 class="font-display font-bold text-3xl sm:text-4xl leading-tight max-w-2xl">
-                    Reserve the Zahira Green Ground or Azwar Hall for your next match, event or function.
+                    Reserve Zahira Green Ground or Azwar Hall for your next match, event or function.
                 </h1>
                 <p class="mt-4 text-chalk-50/70 max-w-xl">
                     Choose a facility, pick your dates, upload your payment receipt &mdash;

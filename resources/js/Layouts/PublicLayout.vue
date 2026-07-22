@@ -27,7 +27,7 @@ import { Link } from '@inertiajs/vue3';
 
         <footer class="bg-pitch-950 text-chalk-50/60 text-xs">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-                &copy; {{ new Date().getFullYear() }} Zahira College &mdash; Zahira Bookings
+                &copy; {{ new Date().getFullYear() }} Zahira College - Puttalam - Booking Portal
             </div>
         </footer>
     </div>
