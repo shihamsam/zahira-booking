@@ -48,6 +48,34 @@ watch(search, () => {
 function formatDate(d) {
     return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+// Deduplicate booking_dates rows by date value (night bookings have one row per hour).
+function uniqueDates(dates) {
+    return [...new Map(dates.map(d => [d.date, d])).values()];
+}
+
+// Convert a slot_hour (18-29 scale) to a "9:00 PM – 10:00 PM" label.
+function hourLabel(h) {
+    const norm = ((h % 24) + 24) % 24;
+    const ampm = norm < 12 ? 'AM' : 'PM';
+    const disp = norm % 12 === 0 ? 12 : norm % 12;
+    return `${disp}:00 ${ampm}`;
+}
+
+// Returns an array of pill labels for the booking's slot selection.
+function slotLabels(b) {
+    const nightHours = [...new Set((b.dates ?? [])
+        .filter(d => d.slot_hour !== null)
+        .map(d => d.slot_hour))]
+        .sort((a, b) => a - b);
+
+    if (nightHours.length > 0) {
+        return nightHours.map(h => `${hourLabel(h)} – ${hourLabel(h + 1)}`);
+    }
+    if (b.slot_type === 'daytime')  return ['6:00 AM – 6:00 PM'];
+    if (b.slot_type === 'full_day') return ['Full Day'];
+    return [b.slot_type ?? '—'];
+}
 </script>
 
 <template>
@@ -90,9 +118,9 @@ function formatDate(d) {
                     <thead class="bg-chalk-100 text-left text-xs uppercase tracking-wide text-ink-700/60">
                         <tr>
                             <th class="px-4 py-3">Reference</th>
-                            <th class="px-4 py-3">Ground</th>
+                            <th class="px-4 py-3">Facility</th>
                             <th class="px-4 py-3">Name</th>
-                            <th class="px-4 py-3">Dates</th>
+                            <th class="px-4 py-3">Date &amp; Slot</th>
                             <th class="px-4 py-3">Amount</th>
                             <th class="px-4 py-3">Status</th>
                         </tr>
@@ -109,8 +137,19 @@ function formatDate(d) {
                                 <p class="font-medium">{{ b.full_name }}</p>
                                 <p class="text-xs text-ink-700/50">{{ b.mobile_number }}</p>
                             </td>
-                            <td class="px-4 py-3 text-xs">
-                                {{ b.dates.length }} day(s) &middot; from {{ b.dates[0] ? formatDate(b.dates[0].date) : '-' }}
+                            <td class="px-4 py-3">
+                                <span v-for="d in uniqueDates(b.dates)" :key="d.date" class="block text-xs font-medium text-ink-900 mb-1">
+                                    {{ formatDate(d.date) }}
+                                </span>
+                                <div class="flex flex-wrap gap-1 mt-0.5">
+                                    <span
+                                        v-for="label in slotLabels(b)"
+                                        :key="label"
+                                        class="inline-block font-mono text-[10px] px-1.5 py-0.5 rounded bg-pitch-50 text-pitch-700 border border-pitch-200 whitespace-nowrap"
+                                    >
+                                        {{ label }}
+                                    </span>
+                                </div>
                             </td>
                             <td class="px-4 py-3">Rs. {{ Number(b.total_amount).toLocaleString() }}</td>
                             <td class="px-4 py-3"><StatusBadge :status="b.status" /></td>

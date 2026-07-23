@@ -204,7 +204,9 @@ class BookingService
 
     protected function generateReferenceNo(Resource $resource): string
     {
-        $prefix   = Str::upper(Str::substr(preg_replace('/[^A-Za-z]/', '', $resource->name), 0, 3)) ?: 'GRD';
+        $prefix = $resource->shortcode
+            ?: Str::upper(Str::substr(preg_replace('/[^A-Za-z]/', '', $resource->name), 0, 3))
+            ?: 'GRD';
         $datePart = now()->format('Ymd');
 
         do {

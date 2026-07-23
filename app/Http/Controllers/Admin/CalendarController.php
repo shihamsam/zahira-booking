@@ -38,16 +38,29 @@ class CalendarController extends Controller
         while ($cursor <= $weekEnd) {
             $dateKey = $cursor->format('Y-m-d');
 
-            $dayBookings = ($bookingDates[$dateKey] ?? collect())->map(function ($bd) {
+            $allSlots = ($bookingDates[$dateKey] ?? collect())->map(function ($bd) {
                 return [
                     'id'           => $bd->booking->id,
                     'reference_no' => $bd->booking->reference_no,
                     'full_name'    => $bd->booking->full_name,
                     'status'       => $bd->booking->status,
                     'resource'     => $bd->booking->resource->name,
+                    'shortcode'    => $bd->booking->resource->shortcode,
                     'slot_type'    => $bd->slot_type,
+                    'slot_hour'    => $bd->slot_hour,   // null for flat slots, 18-29 for night
                 ];
-            })->unique('id')->values();
+            });
+
+            // Flat (whole-day) bookings — deduplicated per booking.
+            $dayBookings = $allSlots
+                ->whereIn('slot_type', ['daytime', 'full_day'])
+                ->unique('id')
+                ->values();
+
+            // Night slots — one entry per booked hour (slot_hour is set).
+            $nightSlots = $allSlots
+                ->whereNotNull('slot_hour')
+                ->values();
 
             $dayBlocks = ($blockedDates[$dateKey] ?? collect())->map(function ($block) {
                 return [
@@ -58,11 +71,12 @@ class CalendarController extends Controller
             })->values();
 
             $days->push([
-                'date'     => $dateKey,
-                'label'    => $cursor->format('D j'),
-                'is_today' => $dateKey === $today,
-                'bookings' => $dayBookings,
-                'blocked'  => $dayBlocks,
+                'date'         => $dateKey,
+                'label'        => $cursor->format('D j'),
+                'is_today'     => $dateKey === $today,
+                'day_bookings' => $dayBookings,   // daytime / full_day
+                'night_slots'  => $nightSlots,    // per-hour night entries
+                'blocked'      => $dayBlocks,
             ]);
 
             $cursor->addDay();

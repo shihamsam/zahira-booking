@@ -13,6 +13,7 @@ class ResourceSeeder extends Seeder
             ['slug' => 'zahira-green-ground'],
             [
                 'name'          => 'Zahira Green Ground',
+                'shortcode'     => 'ZGG',
                 'description'   => 'Main school ground, suitable for cricket, football and outdoor events.',
                 'location'      => 'Zahira College',
                 'price_per_day' => 6000,
@@ -24,6 +25,7 @@ class ResourceSeeder extends Seeder
             ['slug' => 'azwar-hall'],
             [
                 'name'          => 'Azwar Hall',
+                'shortcode'     => 'AZW',
                 'description'   => 'Indoor event hall suitable for functions, seminars, and gatherings. Sound system available on request.',
                 'location'      => 'Zahira College',
                 'price_per_day' => 10000,

@@ -38,6 +38,7 @@ class ResourceController extends Controller
     public function update(Request $request, Resource $resource)
     {
         $request->validate([
+            'shortcode'          => ['nullable', 'string', 'max:10', 'regex:/^[A-Z0-9]+$/'],
             'pricing'            => ['required', 'array'],
             'pricing.*.slot_type'=> ['required', 'string'],
             'pricing.*.rate'     => ['required', 'integer', 'min:0'],
@@ -50,6 +51,7 @@ class ResourceController extends Controller
             ->all();
 
         $resource->update([
+            'shortcode'         => $request->input('shortcode') ? strtoupper($request->input('shortcode')) : null,
             'pricing_overrides' => $overrides,
             'is_active'         => $request->boolean('is_active', $resource->is_active),
         ]);

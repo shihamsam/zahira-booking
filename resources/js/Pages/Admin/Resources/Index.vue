@@ -13,6 +13,7 @@ const editingId = ref(null);
 // One form per resource, keyed by resource id
 function makeForm(resource) {
     return useForm({
+        shortcode: resource.shortcode ?? '',
         pricing: (resource.resolved_pricing ?? []).map(p => ({
             slot_type: p.slot_type,
             label:     p.label,
@@ -42,9 +43,17 @@ function save(resource) {
         <div class="space-y-5">
             <div v-for="resource in resources" :key="resource.id" class="card p-5">
                 <div class="flex items-start justify-between mb-4 flex-wrap gap-2">
-                    <div>
-                        <h2 class="font-display font-semibold text-lg text-pitch-900">{{ resource.name }}</h2>
-                        <p class="text-xs text-ink-700/50 mt-0.5">{{ resource.location }}</p>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div>
+                            <h2 class="font-display font-semibold text-lg text-pitch-900">{{ resource.name }}</h2>
+                            <p class="text-xs text-ink-700/50 mt-0.5">{{ resource.location }}</p>
+                        </div>
+                        <span
+                            v-if="resource.shortcode"
+                            class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-pitch-50 text-pitch-700 border border-pitch-200"
+                        >
+                            {{ resource.shortcode }}
+                        </span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span
@@ -90,6 +99,28 @@ function save(resource) {
 
                 <!-- Edit form -->
                 <form v-else @submit.prevent="save(resource)" class="space-y-4">
+
+                    <!-- Shortcode -->
+                    <div class="flex items-center gap-4 pb-3 border-b border-chalk-200">
+                        <label class="text-sm font-medium text-ink-700 w-40 shrink-0">
+                            Short code
+                            <span class="text-xs text-ink-700/40 block font-normal">Used as booking reference prefix</span>
+                        </label>
+                        <div>
+                            <input
+                                v-model="forms[resource.id].shortcode"
+                                type="text"
+                                maxlength="10"
+                                placeholder="e.g. ZGG"
+                                class="field-input w-28 font-mono uppercase"
+                                @input="forms[resource.id].shortcode = forms[resource.id].shortcode.toUpperCase()"
+                            />
+                            <p v-if="forms[resource.id].errors.shortcode" class="text-clay-600 text-xs mt-1">
+                                {{ forms[resource.id].errors.shortcode }}
+                            </p>
+                        </div>
+                    </div>
+
                     <div class="flex items-center gap-3 pb-3 border-b border-chalk-200">
                         <input
                             :id="`active-${resource.id}`"

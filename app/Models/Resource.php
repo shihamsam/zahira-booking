@@ -13,6 +13,7 @@ class Resource extends Model
     protected $fillable = [
         'name',
         'slug',
+        'shortcode',
         'description',
         'location',
         'image_path',
