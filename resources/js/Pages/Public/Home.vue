@@ -17,6 +17,7 @@ const props = defineProps({
 
 const fullName     = ref('');
 const mobileNumber = ref('');
+const email        = ref('');
 const selectedId   = ref(null);
 
 const nameTouched  = ref(false);
@@ -49,7 +50,7 @@ function proceed() {
     if (!isValid.value || !selectedResource.value) return;
     router.visit(`/facilities/${selectedResource.value.slug}/book`, {
         method: 'get',
-        data: { name: fullName.value.trim(), phone: mobileNumber.value.trim() },
+        data: { name: fullName.value.trim(), phone: mobileNumber.value.trim(), email: email.value.trim() || undefined },
     });
 }
 </script>
@@ -201,6 +202,7 @@ function proceed() {
                             <input
                                 v-model="mobileNumber"
                                 type="tel"
+                                maxlength="10"
                                 class="field-input !py-2.5 !text-sm"
                                 :class="phoneTouched && phoneError ? '!border-clay-500' : ''"
                                 placeholder="e.g. 0771234567"
@@ -208,6 +210,19 @@ function proceed() {
                                 @blur="phoneTouched = true"
                             />
                             <p v-if="phoneTouched && phoneError" class="text-clay-600 text-[11px] mt-1">{{ phoneError }}</p>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="field-label !text-[11px]">
+                                Email
+                                <span class="font-normal text-ink-700/40 normal-case tracking-normal">(optional)</span>
+                            </label>
+                            <input
+                                v-model="email"
+                                type="email"
+                                class="field-input !py-2.5 !text-sm"
+                                placeholder="e.g. you@example.com"
+                                autocomplete="email"
+                            />
                         </div>
                     </div>
                 </div>

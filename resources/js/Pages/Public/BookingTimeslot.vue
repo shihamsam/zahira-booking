@@ -11,6 +11,7 @@ const props = defineProps({
     bookingWindow:          { type: Object,  required: true },
     initialName:            { type: String,  default: '' },
     initialPhone:           { type: String,  default: '' },
+    initialEmail:           { type: String,  default: '' },
     whatsappNumber:         { type: String,  default: '' },
 });
 
@@ -205,6 +206,7 @@ function formatDate(d) {
 const form = useForm({
     full_name:               props.initialName,
     mobile_number:           props.initialPhone,
+    email:                   props.initialEmail,
     slot_type:               '',
     slot_hours:              [],
     start_time:              '',

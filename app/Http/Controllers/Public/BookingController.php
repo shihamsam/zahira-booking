@@ -50,6 +50,7 @@ class BookingController extends Controller
             'bookingWindow'          => ['from' => $from, 'to' => $to],
             'initialName'            => $request->query('name', ''),
             'initialPhone'           => $request->query('phone', ''),
+            'initialEmail'           => $request->query('email', ''),
             'whatsappNumber'         => config('booking.whatsapp_number'),
         ]);
     }
