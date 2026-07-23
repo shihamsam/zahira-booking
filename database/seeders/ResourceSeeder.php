@@ -12,7 +12,7 @@ class ResourceSeeder extends Seeder
         Resource::firstOrCreate(
             ['slug' => 'zahira-green-ground'],
             [
-                'name'          => 'Zahira Green Ground',
+                'name'          => 'Zahira Green',
                 'shortcode'     => 'ZGG',
                 'description'   => 'Main school ground, suitable for cricket, football and outdoor events.',
                 'location'      => 'Zahira College',

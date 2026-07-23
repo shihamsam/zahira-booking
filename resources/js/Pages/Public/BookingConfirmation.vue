@@ -53,7 +53,7 @@ function buildWhatsAppMessage() {
     const ref   = props.booking.reference_no;
     const name  = props.booking.full_name;
     const phone = props.booking.mobile_number;
-    const dates = uniqueDates.value.map(d => d.date).join(', ');
+    const dates = uniqueDates.value.map(d => d.date.slice(0, 10)).join(', ');
 
     const timeLine = nightSlotLabels.value.length > 0
         ? nightSlotLabels.value.map(l => `- ${l}`).join('\n')
@@ -75,8 +75,10 @@ function buildWhatsAppMessage() {
 
 function openWhatsApp() {
     const number  = props.whatsappNumber.replace(/\D/g, '');
-    const message = encodeURIComponent(buildWhatsAppMessage());
-    window.open(`https://wa.me/${number}?text=${message}`, '_blank');
+    // encodeURIComponent converts * to %2A; WhatsApp web displays %2A literally
+    // instead of applying bold formatting, so we decode it back.
+    const encoded = encodeURIComponent(buildWhatsAppMessage()).replace(/%2A/g, '*');
+    window.open(`https://wa.me/${number}?text=${encoded}`, '_blank');
 }
 </script>
 

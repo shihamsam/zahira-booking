@@ -1,7 +1,15 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import LandingLayout from '@/Layouts/LandingLayout.vue';
+
+const supportPhone = computed(() => usePage().props.supportPhone ?? '');
+
+const displayPhone = computed(() => {
+    const d = supportPhone.value.replace(/\D/g, '');
+    if (d.length === 10) return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`;
+    return supportPhone.value;
+});
 
 const props = defineProps({
     resources: { type: Array, default: () => [] },
@@ -96,10 +104,23 @@ function proceed() {
                     <p class="text-chalk-50/80 leading-relaxed
                                text-[0.75rem] lg:text-[0.8125rem]
                                max-w-xs
-                               mb-0 lg:mb-7">
-                        Book Zahira Green Ground or Azwar Hall for your match,
+                               mb-4 lg:mb-5">
+                        Book Zahira Green or Azwar Hall for your match,
                         tournament, event or function — online, in minutes.
                     </p>
+
+                    <!-- Support phone -->
+                    <a
+                        v-if="supportPhone"
+                        :href="`tel:${supportPhone.replace(/\s/g, '')}`"
+                        class="inline-flex items-center gap-2 text-chalk-50/85 hover:text-chalk-50 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-floodlight-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                        </svg>
+                        <span class="text-[0.75rem] text-chalk-50/60">Call us for support</span>
+                        <span class="font-mono text-[0.8125rem] font-semibold tracking-wide">{{ displayPhone }}</span>
+                    </a>
                 </div>
 
                 <!-- Feature list — desktop only, text-left override for readability -->
@@ -222,12 +243,6 @@ function proceed() {
                                         <p v-if="resource.location" class="text-[11px] mt-0.5 text-ink-700/55">
                                             {{ resource.location }}
                                         </p>
-                                    </div>
-                                    <div class="text-right shrink-0 pt-0.5">
-                                        <span class="font-mono font-semibold text-[13px] text-floodlight-600">
-                                            Rs. {{ Number(resource.price_per_day).toLocaleString() }}
-                                        </span>
-                                        <span class="block text-[11px] text-ink-700/55">per day</span>
                                     </div>
                                 </div>
                             </div>

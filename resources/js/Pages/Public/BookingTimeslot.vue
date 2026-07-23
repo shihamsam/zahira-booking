@@ -189,8 +189,9 @@ const selectedSlotLabels = computed(() => {
 
 // ── Review step ──────────────────────────────────────────────────────────────
 
-const showReview = ref(false);
-const agreedToTerms = ref(false);
+const showReview      = ref(false);
+const agreedToTerms   = ref(false);
+const paymentDeadline = ref('');
 
 function formatDate(d) {
     if (!d) return '';
@@ -215,8 +216,19 @@ const form = useForm({
 });
 
 function openReview() {
-    showReview.value = true;
+    showReview.value    = true;
     agreedToTerms.value = false;
+
+    // Deadline = now + 3 hours, formatted yyyy-dd-mm HH:mm AM/PM
+    const d    = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const yyyy = d.getFullYear();
+    const dd   = String(d.getDate()).padStart(2, '0');
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    let   h    = d.getHours();
+    const min  = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    paymentDeadline.value = `${yyyy}-${mm}-${dd} ${String(h).padStart(2, '0')}:${min} ${ampm}`;
 }
 
 function submit() {
@@ -513,14 +525,20 @@ const canReview = computed(() => {
                 </dl>
 
                 <div class="bg-floodlight-500/10 border border-floodlight-500/30 rounded-md p-3 mb-4 text-xs text-ink-700 leading-relaxed">
-                    <p class="font-semibold mb-1 text-floodlight-700">Booking Terms</p>
-                    Booking once confirmed cannot be cancelled within 24 hours of the slot time.
+                    <p class="font-semibold text-floodlight-700 mb-1.5">Please read before confirming</p>
+                    <p>
+                        To secure your booking, full / partial payment must be made within the given time.
+                        Bookings without payment will be automatically cancelled.
+                    </p>
                 </div>
 
                 <div class="flex items-start gap-3 mb-5">
-                    <input id="agree-terms" v-model="agreedToTerms" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-chalk-300 text-pitch-900" />
-                    <label for="agree-terms" class="text-sm text-ink-700 cursor-pointer">
-                        I agree to the terms and conditions
+                    <input id="agree-terms" v-model="agreedToTerms" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-chalk-300 text-pitch-900 shrink-0" />
+                    <label for="agree-terms" class="text-xs text-ink-700 cursor-pointer leading-relaxed">
+                        I have read and understood that my booking will be confirmed only upon payment.
+                        If I do not make the payment by
+                        <strong class="font-semibold text-pitch-900">{{ paymentDeadline }}</strong>,
+                        I agree to the cancellation of my booking.
                     </label>
                 </div>
 

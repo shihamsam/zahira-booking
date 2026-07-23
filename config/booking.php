@@ -19,6 +19,9 @@ return [
     // WhatsApp number depositors should send their receipt to.
     'whatsapp_number' => env('BOOKING_WHATSAPP_NUMBER', '94770000000'),
 
+    // Support / enquiry phone number shown to the public.
+    'support_phone' => env('BOOKING_SUPPORT_PHONE', ''),
+
     // How many months ahead the public calendar allows booking.
     'booking_window_months' => 3,
 
