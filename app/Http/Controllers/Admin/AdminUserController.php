@@ -11,21 +11,26 @@ use Inertia\Inertia;
 
 class AdminUserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        abort_unless($request->user()->isSuperAdmin(), 403);
+
         return Inertia::render('Admin/Admins/Index', [
-            'admins' => User::orderBy('name')->get(['id', 'name', 'email', 'created_at']),
+            'admins' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'created_at']),
         ]);
     }
 
     public function store(StoreAdminUserRequest $request)
     {
+        abort_unless($request->user()->isSuperAdmin(), 403);
+
         $validated = $request->validated();
 
         User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'role'     => 'admin',
         ]);
 
         return back()->with('success', 'Admin account created.');
@@ -33,8 +38,14 @@ class AdminUserController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        abort_unless($request->user()->isSuperAdmin(), 403);
+
         if ($request->user()->id === $user->id) {
             return back()->with('error', 'You cannot remove your own account.');
+        }
+
+        if ($user->isSuperAdmin()) {
+            return back()->with('error', 'The super admin account cannot be removed.');
         }
 
         if (User::count() <= 1) {

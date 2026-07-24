@@ -7,15 +7,17 @@ const flashSuccess = computed(() => page.props.flash?.success);
 const flashError = computed(() => page.props.flash?.error);
 const mobileNavOpen = ref(false);
 
-const navItems = [
+const isSuperAdmin = computed(() => page.props.auth?.user?.isSuperAdmin ?? false);
+
+const navItems = computed(() => [
     { label: 'Dashboard',     href: '/admin/dashboard' },
     { label: 'Bookings',      href: '/admin/bookings' },
     { label: 'Calendar',      href: '/admin/calendar' },
     { label: 'Blocked Dates', href: '/admin/blocked-dates' },
     { label: 'Facilities',    href: '/admin/resources' },
     { label: 'Reports',       href: '/admin/reports' },
-    { label: 'Admins',        href: '/admin/admins' },
-];
+    ...(isSuperAdmin.value ? [{ label: 'Admins', href: '/admin/admins' }] : []),
+]);
 
 function isActive(href) {
     return page.url.startsWith(href);

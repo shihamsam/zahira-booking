@@ -1,12 +1,14 @@
 <script setup>
 import { useForm, router, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const props = defineProps({
     admins: { type: Array, default: () => [] },
 });
 
-const page = usePage();
+const page         = usePage();
+const isSuperAdmin = computed(() => page.props.auth?.user?.isSuperAdmin ?? false);
 
 const form = useForm({
     name: '',
@@ -43,6 +45,7 @@ function formatDate(d) {
                         <tr>
                             <th class="px-5 py-3">Name</th>
                             <th class="px-5 py-3">Email</th>
+                            <th class="px-5 py-3">Role</th>
                             <th class="px-5 py-3">Added</th>
                             <th class="px-5 py-3"></th>
                         </tr>
@@ -51,23 +54,33 @@ function formatDate(d) {
                         <tr v-for="admin in admins" :key="admin.id">
                             <td class="px-5 py-3 font-medium">{{ admin.name }}</td>
                             <td class="px-5 py-3">{{ admin.email }}</td>
+                            <td class="px-5 py-3">
+                                <span
+                                    class="text-xs font-medium px-2 py-0.5 rounded-full border"
+                                    :class="admin.role === 'super_admin'
+                                        ? 'bg-pitch-50 text-pitch-700 border-pitch-300'
+                                        : 'bg-chalk-100 text-ink-700/60 border-chalk-200'"
+                                >
+                                    {{ admin.role === 'super_admin' ? 'Super Admin' : 'Admin' }}
+                                </span>
+                            </td>
                             <td class="px-5 py-3 text-xs text-ink-700/60">{{ formatDate(admin.created_at) }}</td>
                             <td class="px-5 py-3 text-right">
-                                <button
-                                    v-if="admin.id !== page.props.auth.user.id"
-                                    @click="removeAdmin(admin)"
-                                    class="text-xs text-clay-600 hover:underline"
-                                >
-                                    Remove
-                                </button>
-                                <span v-else class="text-xs text-ink-700/40">You</span>
+                                <template v-if="admin.id === page.props.auth.user.id">
+                                    <span class="text-xs text-ink-700/40">You</span>
+                                </template>
+                                <template v-else-if="isSuperAdmin && admin.role !== 'super_admin'">
+                                    <button @click="removeAdmin(admin)" class="text-xs text-clay-600 hover:underline">
+                                        Remove
+                                    </button>
+                                </template>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="card p-5">
+            <div class="card p-5" v-if="isSuperAdmin">
                 <h2 class="font-display font-semibold uppercase tracking-wide text-sm text-pitch-900 mb-4">Add admin</h2>
                 <form @submit.prevent="submit" class="space-y-3">
                     <div>
