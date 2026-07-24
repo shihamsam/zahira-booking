@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Public\BookingController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\ReceiptUploadController;
@@ -30,12 +32,12 @@ Route::get('/facilities/{resource:slug}', [BookingController::class, 'show'])->n
 Route::get('/facilities/{resource:slug}/book', [BookingController::class, 'booking'])->name('facilities.book');
 Route::get('/facilities/{resource:slug}/availability', [BookingController::class, 'availability'])->name('facilities.availability');
 Route::get('/facilities/{resource:slug}/timeslots', [BookingController::class, 'timeslots'])->name('facilities.timeslots');
-Route::post('/facilities/{resource:slug}/bookings', [BookingController::class, 'store'])->name('bookings.store');
+Route::post('/facilities/{resource:slug}/bookings', [BookingController::class, 'store'])->middleware('throttle:10,1')->name('bookings.store');
 Route::get('/bookings/{referenceNo}/confirmation', [BookingController::class, 'confirmation'])->name('bookings.confirmation');
 
 Route::get('/upload-receipt', [ReceiptUploadController::class, 'show'])->name('receipt.show');
 Route::get('/upload-receipt/{referenceNo}', [ReceiptUploadController::class, 'booking'])->name('receipt.booking');
-Route::post('/upload-receipt/{referenceNo}', [ReceiptUploadController::class, 'upload'])->name('receipt.upload');
+Route::post('/upload-receipt/{referenceNo}', [ReceiptUploadController::class, 'upload'])->middleware('throttle:10,1')->name('receipt.upload');
 
 /*
 |--------------------------------------------------------------------------
@@ -45,7 +47,13 @@ Route::post('/upload-receipt/{referenceNo}', [ReceiptUploadController::class, 'u
 
 Route::middleware('guest')->group(function () {
     Route::get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/admin/login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:5,1');
+
+    Route::get('/admin/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/admin/forgot-password', [PasswordResetLinkController::class, 'store'])->middleware('throttle:5,1')->name('password.email');
+
+    Route::get('/admin/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/admin/reset-password', [NewPasswordController::class, 'store'])->middleware('throttle:5,1')->name('password.update');
 });
 
 Route::middleware('auth')->post('/admin/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');

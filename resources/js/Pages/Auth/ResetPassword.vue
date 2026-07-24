@@ -1,15 +1,21 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3';
 
+const props = defineProps({
+    email: { type: String, default: '' },
+    token: { type: String, required: true },
+});
+
 const form = useForm({
-    email:    '',
+    token: props.token,
+    email: props.email,
     password: '',
-    remember: false,
+    password_confirmation: '',
 });
 
 function submit() {
-    form.post('/admin/login', {
-        onFinish: () => form.reset('password'),
+    form.post('/admin/reset-password', {
+        onFinish: () => form.reset('password', 'password_confirmation'),
     });
 }
 </script>
@@ -24,8 +30,10 @@ function submit() {
                 <img src="/images/logo-text.png" alt="Zahira College" class="h-10 w-auto object-contain" />
             </div>
 
-            <!-- Login form -->
+            <!-- Reset password form -->
             <form @submit.prevent="submit" class="card p-6 space-y-4">
+                <h1 class="font-display font-bold text-lg text-pitch-900">Reset your password</h1>
+
                 <div>
                     <label class="field-label">Email</label>
                     <input v-model="form.email" type="email" class="field-input" autofocus />
@@ -33,31 +41,25 @@ function submit() {
                 </div>
 
                 <div>
-                    <label class="field-label">Password</label>
+                    <label class="field-label">New password</label>
                     <input v-model="form.password" type="password" class="field-input" />
                     <p v-if="form.errors.password" class="text-clay-600 text-xs mt-1">{{ form.errors.password }}</p>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <label class="flex items-center gap-2 text-sm text-ink-700">
-                        <input v-model="form.remember" type="checkbox" class="rounded border-chalk-200" />
-                        Remember me
-                    </label>
-
-                    <Link href="/admin/forgot-password" class="text-sm text-ink-700/70 hover:text-ink-700">
-                        Forgot password?
-                    </Link>
+                <div>
+                    <label class="field-label">Confirm new password</label>
+                    <input v-model="form.password_confirmation" type="password" class="field-input" />
                 </div>
 
                 <button type="submit" class="btn-primary w-full" :disabled="form.processing">
-                    {{ form.processing ? 'Signing in...' : 'Sign in' }}
+                    {{ form.processing ? 'Resetting...' : 'Reset password' }}
                 </button>
             </form>
 
-            <!-- Back to site -->
+            <!-- Back to login -->
             <p class="text-center mt-5 text-sm">
-                <Link href="/" class="text-chalk-50/60 hover:text-chalk-50">
-                    ← Back to main site
+                <Link href="/admin/login" class="text-chalk-50/60 hover:text-chalk-50">
+                    ← Back to sign in
                 </Link>
             </p>
 

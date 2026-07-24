@@ -1,7 +1,7 @@
 # Zahira Bookings — Technical Documentation
 
-> Generated: 2026-07-16  
-> Stack: Laravel 11 · Vue 3 · Inertia.js · Tailwind CSS · MySQL
+> Last updated: 2026-07-24
+> Stack: Laravel 12 · Vue 3 · Inertia.js · Tailwind CSS · MySQL
 
 ---
 
@@ -9,506 +9,365 @@
 
 1. [System Overview](#1-system-overview)
 2. [Architecture](#2-architecture)
-3. [Current Implementation Summary](#3-current-implementation-summary)
-4. [Gap Analysis](#4-gap-analysis)
-5. [Implementation Plan](#5-implementation-plan)
-6. [Data Model Reference](#6-data-model-reference)
-7. [API / Route Reference](#7-api--route-reference)
+3. [Technology Stack](#3-technology-stack)
+4. [Data Model](#4-data-model)
+5. [Route Reference](#5-route-reference)
+6. [Controller & Service Reference](#6-controller--service-reference)
+7. [Frontend Pages & Layouts](#7-frontend-pages--layouts)
 8. [Configuration Reference](#8-configuration-reference)
+9. [Background Jobs & Scheduled Commands](#9-background-jobs--scheduled-commands)
+10. [Email Notifications](#10-email-notifications)
+11. [Deployment](#11-deployment)
 
 ---
 
 ## 1. System Overview
 
-Zahira Bookings is a facility reservation system for Zahira College, Colombo. It manages bookings for two venues:
+Zahira Bookings is a facility reservation system for Zahira College, Puttalam, Sri Lanka. It manages bookings for two venues:
 
-| Facility | Description |
-|---|---|
-| **Zahira Green** | College cricket / football ground. Time-slot based bookings (daytime flat rate or hourly nighttime with lighting options). |
-| **Azwar Hall** | Indoor event hall. Per-day rent plus optional chairs and sound system. |
+| Facility | Shortcode | Slug | Booking Model |
+|---|---|---|---|
+| **Zahira Green** | ZGG | `zahira-green-ground` | Daytime flat rate OR per-hour night slots with 2 or 4 lighting options |
+| **Azwar Hall** | AZW | `azwar-hall` | Full-day flat rate + optional chair add-on |
 
-Public users browse availability, reserve slots, and submit payment receipts. Admins verify payments and confirm or reject bookings.
+Public users browse available dates, choose a time slot, submit their details, and upload a payment receipt. Admins review bookings, confirm or reject them, and manage dates and reports.
 
 ---
 
 ## 2. Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                  Public Browser                     │
-│  Vue 3 (Inertia SPA) + Tailwind CSS                 │
-└────────────────────┬────────────────────────────────┘
-                     │ HTTP / Inertia requests
-┌────────────────────▼────────────────────────────────┐
-│               Laravel 11 Backend                    │
-│  Controllers · Services · Form Requests             │
-│  Laravel Mail (queued) · Laravel Auth               │
-└──────────────┬──────────────────┬───────────────────┘
-               │                  │
-        ┌──────▼──────┐   ┌───────▼───────┐
-        │   MySQL DB  │   │  File Storage │
-        │ (migrations)│   │ (receipts/)   │
-        └─────────────┘   └───────────────┘
+┌──────────────────────────────────────────────────────┐
+│                  Public Browser                      │
+│  Vue 3 (Inertia SPA) + Tailwind CSS                  │
+└─────────────────────┬────────────────────────────────┘
+                      │ HTTP / Inertia requests
+┌─────────────────────▼────────────────────────────────┐
+│               Laravel 12 Backend                     │
+│  Controllers · Services · Form Requests              │
+│  Laravel Mail (queued) · Laravel Auth (session)      │
+└──────────┬───────────────────────┬───────────────────┘
+           │                       │
+    ┌──────▼──────┐        ┌───────▼──────────┐
+    │   MySQL DB  │        │  File Storage    │
+    │ (migrations)│        │ storage/public/  │
+    └─────────────┘        │  receipts/       │
+                           └──────────────────┘
+                                   │
+                           ┌───────▼──────────┐
+                           │  Google Calendar │
+                           │  (service acct)  │
+                           └──────────────────┘
 ```
 
-**Key dependencies**
+**Key design decisions**
 
-| Package | Purpose |
-|---|---|
-| `laravel/framework` ^11 | PHP backend framework |
-| `inertiajs/inertia-laravel` | Server-driven SPA bridge |
-| `vue` ^3 | Frontend reactivity |
-| `@inertiajs/vue3` | Vue adapter for Inertia |
-| `tailwindcss` ^3 | Utility-first CSS |
-| `vite` ^5 | Frontend build tool |
+- **Inertia.js** replaces a REST/GraphQL API. All server responses are full Inertia page renders or redirects — no separate JSON API layer.
+- **Pessimistic locking** (`lockForUpdate`) in `BookingService::createBooking()` prevents double-bookings under concurrent requests.
+- **Per-hour booking_dates rows** for night slots: one row per booked hour with `slot_hour` (18–23 = 6 PM–11 PM, 0–5 = midnight–5 AM mapped as 24–29 in the UI scale). This allows partial-hour availability tracking.
+- **Role column on users table**: `admin` (default) vs `super_admin`. Super Admin gates user management; no external RBAC package required.
+- **Global Inertia shared props** (via `HandleInertiaRequests::share()`): `auth.user`, `auth.user.isSuperAdmin`, `flash.success`, `flash.error`, `supportPhone`, `supportPhone2`.
 
 ---
 
-## 3. Current Implementation Summary
+## 3. Technology Stack
 
-### 3.1 What Is Implemented
-
-| Area | Status | Notes |
+| Package | Version | Purpose |
 |---|---|---|
-| Public ground listing (home page) | ✅ Done | Shows active resources with price/description |
-| Public availability calendar | ✅ Done | Month-view, marks unavailable dates |
-| Multi-day booking form | ✅ Done | Name, mobile, purpose; up to 31 dates |
-| Booking confirmation page | ✅ Done | Reference no., bank details, WhatsApp prompt |
-| Booking reference number generation | ✅ Done | Format: `ZGR-YYYYMMDD-XXXX` |
-| Concurrency-safe booking creation | ✅ Done | Pessimistic DB locking prevents double-booking |
-| Admin authentication | ✅ Done | Email + password, session-based |
-| Admin dashboard (stats) | ✅ Done | Pending count, monthly confirmed, monthly income, totals |
-| Admin booking list with filters | ✅ Done | Filter by status, resource, date range, search |
-| Admin booking detail view | ✅ Done | Full booking info with dates, amounts |
-| Admin receipt upload | ✅ Done | Image upload (max 5 MB) stored in `public/receipts/` |
-| Admin confirm booking | ✅ Done | Requires receipt present; records who confirmed |
-| Admin cancel booking | ✅ Done | With reason; records who cancelled |
-| Email notification to admin on new booking | ✅ Done | Queued mailable to all admins + extra emails |
-| Financial reports (date range) | ✅ Done | Period breakdown, resource breakdown |
-| CSV export of confirmed bookings | ✅ Done | Streaming CSV download |
-| Admin user management | ✅ Done | Create, list, delete (with self-delete guard) |
-| Responsive layout | ✅ Done | Tailwind responsive utilities |
+| `laravel/framework` | ^12 | PHP backend framework |
+| `inertiajs/inertia-laravel` | — | Server-driven SPA bridge |
+| `vue` | ^3 | Frontend reactivity (Composition API) |
+| `@inertiajs/vue3` | — | Vue adapter for Inertia |
+| `tailwindcss` | ^3 | Utility-first CSS |
+| `vite` | ^5 | Frontend build tool |
+| `google/apiclient` | — | Google Calendar API integration |
 
-### 3.2 Seeded Defaults
+**Custom Tailwind color palette** (defined in `tailwind.config.js`):
 
-| Item | Value |
+| Token | Semantic Role |
 |---|---|
-| Default facility | Zahira Green Ground |
-| Default price | Rs. 5,000 / day (flat) |
-| Default admin | `admin@zahirags.lk` / `change-this-password` |
+| `pitch` | Dark green — primary brand color (sidebar, headings) |
+| `chalk` | Off-white — light backgrounds, text on dark |
+| `floodlight` | Amber/gold — accents, greeting text, active states |
+| `ink` | Dark grey — body text |
+| `clay` | Red/orange — errors, danger states |
 
 ---
 
-## 4. Gap Analysis
+## 4. Data Model
 
-The following gaps were identified by comparing the implemented system against the Business Requirements document (`BusinessRequirements_ZzahiraBookings.pdf`).
+### Schema
 
-### Priority Legend
-- 🔴 **Critical** — Core feature explicitly specified; blocking completeness
-- 🟡 **Medium** — Specified but the system partially works without it
-- 🟢 **Minor** — Enhancement or edge-case handling
+```
+users
+  id, name, email, password, role (varchar 20, default 'admin'),
+  remember_token, timestamps
 
----
+resources
+  id, name, slug (unique), shortcode (varchar 10),
+  description, location, image_path,
+  price_per_day (decimal 10,2), pricing_overrides (json),
+  is_active (bool), timestamps
 
-### GAP-01 🔴 — User Uploads Receipt at Booking Time
+bookings
+  id, reference_no (unique), resource_id (FK),
+  full_name, mobile_number,
+  nic (nullable), email (nullable), purpose (nullable),
+  slot_type (enum: full_day|daytime|night_4lights|night_2lights),
+  start_time, end_time, hours (smallint),
+  chair_count (smallint), sound_system_requested (bool),
+  total_amount (decimal 10,2),
+  status (enum: pending|confirmed|cancelled|rejected),
+  receipt_path,
+  admin_notes,
+  google_event_id,
+  confirmed_by (FK users), confirmed_at,
+  cancelled_by (FK users), cancelled_at, cancellation_reason,
+  rejected_by (FK users), rejected_at, rejection_reason,
+  timestamps
 
-**Requirement (§2.1.1, §4.1.3):** User selects date/time → fills form → **uploads payment receipt image (JPG/PNG/PDF)** → submits.
+booking_dates
+  id, booking_id (FK), resource_id (FK),
+  date (date), slot_type (varchar),
+  slot_hour (smallint, nullable),   ← per-hour tracking for night slots
+  unit_price (decimal 10,2), timestamps
+  INDEX (resource_id, date)
 
-**Current behaviour:** Receipt upload is an admin-only action performed after the booking is created. The public confirmation page directs the user to send their receipt manually via WhatsApp.
+blocked_dates
+  id, resource_id (FK, nullable — null = all facilities),
+  date (date), reason (varchar 255),
+  created_by (FK users), timestamps
+```
 
-**Impact:** The booking workflow does not match the specified UX. Admins receive bookings with no receipt attached, requiring a manual out-of-band receipt collection step.
+### Booking status flow
 
----
+```
+pending  →  confirmed  (admin verifies receipt, dispatches Google Calendar job)
+         →  rejected   (admin rejects booking with reason)
+         →  cancelled  (admin or auto-alert cancels booking)
+confirmed →  cancelled  (admin can still cancel a confirmed booking)
+```
 
-### GAP-02 🔴 — Time Slot Booking for Zahira Green
+### Night-slot hour encoding
 
-**Requirement (§2.1.1, §2.2):** Users must be able to select a **time slot**, not just a date. Three slot types exist:
+The UI represents the 12-hour night window (6 PM → 6 AM next day) as hours 18–29 on a virtual 30-hour clock. `booking_dates.slot_hour` stores this value:
 
-| Slot | Lighting | Rate |
-|---|---|---|
-| 8:30 AM – 6:30 PM | Daytime | Rs. 6,000 flat |
-| 6:30 PM – 6:30 AM | 4 Lights | Rs. 3,500 / hour |
-| 6:30 PM – 6:30 AM | 2 Lights | Rs. 2,000 / hour |
-
-**Current behaviour:** System only supports whole-day bookings at a single flat rate (`price_per_day`). No time slots, no lighting options, no hourly calculation.
-
-**Impact:** All nighttime bookings are mis-priced. A 5-hour 4-light session should cost Rs. 17,500 but the flat-rate system cannot represent this.
-
----
-
-### GAP-03 🔴 — Azwar Hall Module
-
-**Requirement (§3):** A complete second facility, **Azwar Hall**, must be supported with its own booking flow and pricing.
-
-| Item | Rate |
+| slot_hour | Clock time |
 |---|---|
-| Hall Rent | Rs. 10,000 per event/day |
-| Chairs | Rs. 10 per chair |
-| Sound system | Arranged on request |
+| 18 | 6:00 PM |
+| 19 | 7:00 PM |
+| … | … |
+| 23 | 11:00 PM |
+| 0 | Midnight (00:00) |
+| 1 | 1:00 AM |
+| … | … |
+| 5 | 5:00 AM |
 
-**Current behaviour:** The `resources` table supports multiple facilities generically, but:
-- No Azwar Hall record is seeded.
-- No chair quantity field exists on the booking form.
-- No sound system request field exists.
-- Pricing model does not support per-item add-ons.
+Daytime and full_day bookings have `slot_hour = null`.
 
----
+### Reference number format
 
-### GAP-04 🔴 — NIC Field in Booking Form
-
-**Requirement (§4.1.2):** Booking form must capture **Name, Contact, NIC, Event Type, Date, Time**.
-
-**Current behaviour:** Form captures `full_name`, `mobile_number`, `purpose`. NIC (National Identity Card) number is absent.
+`{SHORTCODE}-{YYYYMMDD}-{4 random uppercase chars}`
+Example: `ZGG-20260724-AB3X`
 
 ---
 
-### GAP-05 🔴 — Booker Notification After Confirmation
+## 5. Route Reference
 
-**Requirement (§4.1.4):** "Auto email/WhatsApp confirmation after Admin approval."
+### Public routes (no auth required)
 
-**Current behaviour:** Only admins are notified (on new booking). The **booker receives no email or message when their booking is confirmed or cancelled**.
-
-**Impact:** Bookers have no automated way to know their booking status changed. They must contact admins manually.
-
----
-
-### GAP-06 🔴 — Google Calendar API Integration
-
-**Requirement (§2.1.6, §3.1.4, §4.3.3):** Confirmed bookings must be **automatically added to Google Calendar**.
-
-**Current behaviour:** No Google Calendar integration exists.
-
----
-
-### GAP-07 🟡 — Admin Weekly Calendar View
-
-**Requirement (§2.1.5):** Admin panel must have a **"View Weekly calendar"** in addition to the list view.
-
-**Current behaviour:** Only a list/table view exists for admin bookings. No calendar visualisation.
-
----
-
-### GAP-08 🟡 — Block Dates / Holidays
-
-**Requirement (§4.2.4):** Admin must be able to **manage pricing and block dates/holidays**.
-
-**Current behaviour:** No blocked-dates mechanism. Any date can be booked unless another booking already occupies it.
-
----
-
-### GAP-09 🟡 — Admin Pricing Management UI
-
-**Requirement (§4.2.4):** Admin should be able to **manage pricing** through the panel.
-
-**Current behaviour:** Prices are set at seeder time and stored as `price_per_day` on the `resources` table. There is no admin UI to change prices.
-
----
-
-### GAP-10 🟡 — WhatsApp Notification to Admin
-
-**Requirement (§2.1.6):** "Email / **WhatsApp** notification to Admin on every new booking."
-
-**Current behaviour:** Email notification is implemented. WhatsApp is handled manually — the confirmation page shows a WhatsApp number for the user to message the admin, but no automated WhatsApp message is sent to the admin.
-
----
-
-### GAP-11 🟡 — Report Export: Weekly Preset + PDF/Excel Format
-
-**Requirement (§4.2.5):** "Export reports: **Weekly**, Monthly." Azwar Hall also requires **Excel/PDF** export (§3.1.3).
-
-**Current behaviour:** Reports support monthly/quarterly/yearly presets and custom ranges. Export is CSV only. No weekly preset; no PDF or Excel format.
-
----
-
-### GAP-12 🟡 — Dashboard: "Today's Bookings" Widget
-
-**Requirement (§4.2.2):** Dashboard should show "Today's bookings, Pending payments, Revenue."
-
-**Current behaviour:** Dashboard shows this-month stats and upcoming bookings. There is no explicit "today's bookings" section.
-
----
-
-### GAP-13 🟢 — Explicit "Rejected" Booking Status
-
-**Requirement (§2.1.5, §4.2.3):** Admin actions listed as "Approve, **Reject**, Cancel." Reject (failed payment verification) is semantically different from Cancel (admin-initiated removal).
-
-**Current behaviour:** Only `pending`, `confirmed`, `cancelled` statuses exist. "Reject" is currently handled as a cancel.
-
----
-
-### GAP-14 🟢 — 2-Day Cancellation Rule Enforcement
-
-**Requirement (§2.1.3):** Admin should cancel pending slots if payment is not confirmed **2 days before** the booking date.
-
-**Current behaviour:** Admin can cancel any time with no enforcement or automated alert for this rule.
-
----
-
-### Gap Summary Table
-
-| ID | Description | Priority | Area |
+| Method | URI | Handler | Description |
 |---|---|---|---|
-| GAP-01 | User uploads receipt at booking time | 🔴 Critical | Public booking flow |
-| GAP-02 | Time slot + lighting options for Zahira Green | 🔴 Critical | Pricing / booking model |
-| GAP-03 | Azwar Hall module (full) | 🔴 Critical | New module |
-| GAP-04 | NIC field in booking form | 🔴 Critical | Booking form |
-| GAP-05 | Booker confirmation/cancellation email | 🔴 Critical | Notifications |
-| GAP-06 | Google Calendar API integration | 🔴 Critical | Integrations |
-| GAP-07 | Admin weekly calendar view | 🟡 Medium | Admin UI |
-| GAP-08 | Block dates / holidays | 🟡 Medium | Admin management |
-| GAP-09 | Pricing management UI | 🟡 Medium | Admin management |
-| GAP-10 | WhatsApp notification to admin | 🟡 Medium | Notifications |
-| GAP-11 | Weekly report preset + PDF/Excel export | 🟡 Medium | Reports |
-| GAP-12 | Dashboard "today's bookings" widget | 🟡 Medium | Admin UI |
-| GAP-13 | Explicit "rejected" booking status | 🟢 Minor | Booking model |
-| GAP-14 | 2-day cancellation rule enforcement | 🟢 Minor | Business rules |
+| GET | `/` | `Public/HomeController@index` | Home page — facility picker + user details form |
+| GET | `/facilities/{slug}` | `Public/BookingController@show` | Facility detail / availability calendar |
+| GET | `/facilities/{slug}/book` | `Public/BookingController@booking` | Time-slot booking page |
+| GET | `/facilities/{slug}/timeslots` | `Public/BookingController@timeslots` | JSON — booked night hours for a date |
+| GET | `/facilities/{slug}/availability` | `Public/BookingController@availability` | JSON — unavailable dates |
+| POST | `/facilities/{slug}/bookings` | `Public/BookingController@store` | Submit a booking |
+| GET | `/bookings/{ref}/confirmation` | `Public/BookingController@confirmation` | Booking confirmation page |
+| GET | `/upload-receipt` | `Public/ReceiptUploadController@show` | Receipt lookup form |
+| GET | `/upload-receipt/{ref}` | `Public/ReceiptUploadController@booking` | Receipt upload page |
+| POST | `/upload-receipt/{ref}` | `Public/ReceiptUploadController@upload` | Submit receipt file |
+| GET | `/grounds/{slug}` | redirect | 301 redirect from old `/grounds/` URLs |
+
+### Admin auth routes
+
+| Method | URI | Handler |
+|---|---|---|
+| GET | `/admin/login` | `Auth/AuthenticatedSessionController@create` |
+| POST | `/admin/login` | `Auth/AuthenticatedSessionController@store` |
+| POST | `/admin/logout` | `Auth/AuthenticatedSessionController@destroy` |
+
+### Admin panel routes (auth required)
+
+| Method | URI | Handler | Super Admin only |
+|---|---|---|---|
+| GET | `/admin/dashboard` | `Admin/DashboardController@index` | |
+| GET | `/admin/bookings` | `Admin/BookingController@index` | |
+| GET | `/admin/bookings/{id}` | `Admin/BookingController@show` | |
+| POST | `/admin/bookings/{id}/receipt` | `Admin/BookingController@uploadReceipt` | |
+| POST | `/admin/bookings/{id}/confirm` | `Admin/BookingController@confirm` | |
+| POST | `/admin/bookings/{id}/cancel` | `Admin/BookingController@cancel` | |
+| POST | `/admin/bookings/{id}/reject` | `Admin/BookingController@reject` | |
+| GET | `/admin/calendar` | `Admin/CalendarController@index` | |
+| GET | `/admin/blocked-dates` | `Admin/BlockedDateController@index` | |
+| POST | `/admin/blocked-dates` | `Admin/BlockedDateController@store` | |
+| DELETE | `/admin/blocked-dates/{id}` | `Admin/BlockedDateController@destroy` | |
+| GET | `/admin/resources` | `Admin/ResourceController@index` | |
+| PUT | `/admin/resources/{id}` | `Admin/ResourceController@update` | |
+| GET | `/admin/reports` | `Admin/ReportController@index` | |
+| GET | `/admin/reports/export` | `Admin/ReportController@export` | |
+| GET | `/admin/admins` | `Admin/AdminUserController@index` | ✅ |
+| POST | `/admin/admins` | `Admin/AdminUserController@store` | ✅ |
+| DELETE | `/admin/admins/{id}` | `Admin/AdminUserController@destroy` | ✅ |
+| GET | `/admin/profile` | `Admin/ProfileController@index` | |
+| PUT | `/admin/profile/password` | `Admin/ProfileController@updatePassword` | |
 
 ---
 
-## 5. Implementation Plan
+## 6. Controller & Service Reference
 
-The plan is organised into **5 phases** ordered by dependency and business priority.
+### Services
 
----
+**`BookingService`** — Core booking logic.
+- `unavailableDates(resource, from, to, slotType?)` — Returns booked + blocked dates for the calendar.
+- `unavailableDatesBySlot(resource, from, to)` — Returns unavailable dates keyed by slot type.
+- `createBooking(resource, dates, …, slotHours[])` — DB transaction: conflict check → blocked date check → price calculation → create `Booking` + `BookingDate` rows → notify admins.
+- `generateReferenceNo(resource)` — Generates collision-safe reference numbers using the resource `shortcode`.
 
-### Phase 1 — Booking Form & Data Model Fixes
-*Addresses: GAP-01, GAP-02, GAP-03, GAP-04, GAP-13*
+**`PricingService`** — Pricing calculations.
+- `slots(resource)` — Returns slot config array from `config/booking.php` for the resource slug.
+- `unitPrice(resource, slotType, hours)` — Price for a single date/hour. Falls back to `resource.price_per_day` if no config entry.
+- `totalAmount(resource, slotType, dates, hours, chairCount)` — Total including chair add-on (Azwar Hall).
+- Reads `resource.pricing_overrides` (JSON column) first; falls back to config defaults.
 
-**Estimated effort:** 3–4 days
+**`GoogleCalendarService`** — Google Calendar sync.
+- `addEvent(booking)` — Creates a Calendar event and returns the Google event ID.
+- `removeEvent(googleEventId)` — Deletes the event.
 
-#### Step 1.1 — Add NIC and booking type fields to the bookings table
+### Key middleware
 
-Create migration:
-```
-php artisan make:migration add_nic_and_slot_to_bookings_table
-```
-Add columns:
-- `nic` — `string(20)`, nullable initially (to be required going forward)
-- `slot_type` — enum `('full_day', 'daytime', 'night_4lights', 'night_2lights')`, nullable
-- `start_time` — `time`, nullable
-- `end_time` — `time`, nullable
-- `hours` — `unsignedSmallInteger`, nullable (for hourly slots)
-
-Update `StoreBookingRequest` validation rules to require `nic` and `slot_type` for Zahira Green.
-
-#### Step 1.2 — Implement time-slot pricing engine
-
-Create `app/Services/PricingService.php`:
+**`HandleInertiaRequests`** — Shares global props with every page:
 ```php
-class PricingService
-{
-    public function calculate(Resource $resource, string $slotType, int $hours = 0): float;
-    public function slots(Resource $resource): array; // returns available slot options
-}
-```
-Pricing rules stored in `config/booking.php` under a `pricing` key per facility slug:
-```php
-'pricing' => [
-    'zahira-green' => [
-        'daytime'       => ['type' => 'flat',   'rate' => 6000],
-        'night_4lights' => ['type' => 'hourly',  'rate' => 3500],
-        'night_2lights' => ['type' => 'hourly',  'rate' => 2000],
-    ],
-]
+'auth' => ['user' => [..., 'isSuperAdmin' => $user->isSuperAdmin()]],
+'flash' => ['success' => session('success'), 'error' => session('error')],
+'supportPhone' => config('booking.support_phone'),
+'supportPhone2' => config('booking.support_phone_2'),
 ```
 
-#### Step 1.3 — Update public booking form (ResourceShow.vue)
+### Form Requests
 
-- Add slot type selector (radio buttons: Daytime / Night 4 Lights / Night 2 Lights).
-- Show time range picker (start/end time) when a nighttime slot is selected.
-- Show NIC input field.
-- Compute total dynamically in Vue based on slot type + hours.
-
-#### Step 1.4 — User uploads receipt at booking time
-
-- Add `receipt_file` field to `StoreBookingRequest` (required, `mimes:jpg,jpeg,png,pdf`, `max:5120`).
-- In `BookingService::createBooking()`, accept and store the uploaded file to `storage/app/public/receipts/`.
-- Save path to `bookings.receipt_path` on creation (not on admin upload).
-- Update `ResourceShow.vue` to include a file upload input on the booking form.
-- Update `BookingConfirmation.vue` to confirm receipt was received rather than directing user to WhatsApp.
-- Keep admin's ability to replace the receipt if the uploaded one is invalid.
-
-#### Step 1.5 — Add "rejected" booking status
-
-- Add `rejected` to the `status` enum on `bookings` table via migration.
-- Add `rejected_by`, `rejected_at`, `rejection_reason` columns (same pattern as `cancelled_*`).
-- Add `Admin/BookingController@reject` action with its own route.
-- Update `StatusBadge.vue` with a red/orange colour for `rejected`.
-- Update all filter dropdowns to include `rejected`.
-
-#### Step 1.6 — Seed Azwar Hall resource
-
-Create `AzwarHallSeeder`:
-- Name: "Azwar Hall"
-- Slug: "azwar-hall"
-- Price: Rs. 10,000 / day (base)
-- Description and location fields
-
-Add Azwar Hall pricing to `config/booking.php`:
-```php
-'azwar-hall' => [
-    'hall_rent' => 10000,  // per event/day
-    'chair_rate' => 10,    // per chair
-],
-```
-
-#### Step 1.7 — Add Azwar Hall add-ons to booking form
-
-- Add `chair_count` — `unsignedSmallInteger`, nullable to `bookings` table migration.
-- Add `sound_system_requested` — `boolean`, default false.
-- In `ResourceShow.vue`, show chair count input and sound system checkbox conditionally when the resource is Azwar Hall (check `resource.slug === 'azwar-hall'`).
-- In `PricingService`, include `chair_count * chair_rate` in the Azwar Hall total.
+**`StoreBookingRequest`** — Validates the public booking form submission:
+- `full_name`, `mobile_number` (required, `^0\d{9}$`)
+- `nic` (nullable), `email` (nullable email)
+- `slot_type` (enum), `dates` (array of Y-m-d strings)
+- `slot_hours` (required array min:1 for night slots; nullable for daytime/full_day)
+- Items within `slot_hours`: integer 0–23 or 18–29 (night hour range)
 
 ---
 
-### Phase 2 — Notifications (Booker-side)
-*Addresses: GAP-05, GAP-10*
+## 7. Frontend Pages & Layouts
 
-**Estimated effort:** 1–2 days
+### Layouts
 
-#### Step 2.1 — Collect booker email address
+| File | Usage |
+|---|---|
+| `LandingLayout.vue` | Home page only. No header/footer. Full-viewport two-column shell. |
+| `PublicLayout.vue` | All other public pages. Dark green header with logos, dual support phone numbers, sticky footer. `max-w-7xl` container. |
+| `AdminLayout.vue` | All admin pages. `h-screen overflow-hidden` outer. Fixed sidebar (`h-full`). Scrollable `<main>` (`overflow-y-auto`). Sidebar shows Hello greeting → Dashboard → nav items → Admins (super_admin only). |
 
-- Add `email` — `string(255)`, nullable to `bookings` table.
-- Add `email` field to the public booking form and `StoreBookingRequest` (optional but encouraged).
+### Public pages
 
-#### Step 2.2 — Send confirmation email to booker
+| Page | Route | Key features |
+|---|---|---|
+| `Home.vue` | `/` | Two-column viewport layout. Facility selector cards. Name + phone + email form. "Choose Your Time Slot" button. Receipt upload shortcut. Support phone links. |
+| `ResourceShow.vue` | `/facilities/{slug}` | Availability calendar. Legacy booking form (single-date, full slot). |
+| `BookingTimeslot.vue` | `/facilities/{slug}/book` | Viewport-constrained two-panel. Calendar on left (single-select). Slot grid on right (1 daytime tile + 12 hourly night tiles). Per-hour availability from `/timeslots` API. Pre-submit review modal with payment deadline (now + 3 hours). |
+| `BookingConfirmation.vue` | `/bookings/{ref}/confirmation` | Two-panel viewport layout. Left: booking details with deduplicated dates and individual night slot labels. Right: prominent reference number with copy button, bank details, WhatsApp send button. |
+| `ReceiptUpload.vue` | `/upload-receipt/{ref}` | Reference lookup → upload card. Success shown as centered modal overlay (not inline banner). |
 
-Create `app/Mail/BookingConfirmed.php`:
-- Triggered from `Admin/BookingController@confirm`.
-- Recipient: `booking->email` (skip if null).
-- Content: reference no., facility, dates, total amount, a "your booking is confirmed" message.
+### Admin pages
 
-Create `app/Mail/BookingCancelled.php` / `BookingRejected.php`:
-- Same trigger pattern from the cancel/reject actions.
-- Content: reason provided by admin.
-
-Blade templates in `resources/views/emails/`.
-
-#### Step 2.3 — WhatsApp notification to admin via Twilio or Meta API (optional integration point)
-
-- Add `WHATSAPP_PROVIDER` env variable (e.g., `twilio`).
-- Create `app/Services/WhatsAppService.php` with a `sendToAdmin(Booking $booking): void` method.
-- Call from `BookingService::notifyAdmins()` alongside the existing email.
-- Implementation can be deferred; the service class should be stubbed and logged if credentials are absent.
-
----
-
-### Phase 3 — Google Calendar Integration
-*Addresses: GAP-06*
-
-**Estimated effort:** 1–2 days
-
-#### Step 3.1 — Install Google API PHP client
-
-```
-composer require google/apiclient
-```
-
-#### Step 3.2 — Add Google OAuth credentials to config
-
-Add to `config/services.php`:
-```php
-'google_calendar' => [
-    'calendar_id'   => env('GOOGLE_CALENDAR_ID'),
-    'credentials'   => env('GOOGLE_SERVICE_ACCOUNT_JSON'), // path to service account JSON
-],
-```
-
-#### Step 3.3 — Create GoogleCalendarService
-
-Create `app/Services/GoogleCalendarService.php`:
-```php
-class GoogleCalendarService
-{
-    public function addEvent(Booking $booking): string; // returns Google event ID
-    public function removeEvent(string $googleEventId): void;
-}
-```
-- `addEvent` constructs a Google Calendar `Event` with title: `[FACILITY] — {reference_no}`, description: purpose, date(s) from `BookingDate` records.
-- Store the returned Google event ID in a new `google_event_id` column on `bookings`.
-
-#### Step 3.4 — Hook into booking confirm/cancel actions
-
-- In `Admin/BookingController@confirm`: call `GoogleCalendarService::addEvent()` after status change.
-- In `Admin/BookingController@cancel` and `@reject`: call `GoogleCalendarService::removeEvent()` if `google_event_id` is set.
-- Wrap in try/catch — Google Calendar failure must not block booking confirmation.
+| Page | Route | Key features |
+|---|---|---|
+| `Dashboard.vue` | `/admin/dashboard` | Stats: pending count, monthly confirmed/income, total, today count/income. Today's bookings list. Upcoming bookings. Recent pending. |
+| `Bookings/Index.vue` | `/admin/bookings` | Searchable, filterable table. "Date & Slot" column shows actual slots as pills (night hours formatted as "H:00 AM – H:00 AM"). |
+| `Bookings/Show.vue` | `/admin/bookings/{id}` | Full booking detail. Deduplicated date list, individual night slot labels. Confirm / Reject / Cancel actions. Receipt preview. |
+| `Calendar/Index.vue` | `/admin/calendar` | Time-grid calendar. "Day Time" all-day row. 12 hourly night rows (6 PM → 6 AM). Tiles show facility shortcode. Midnight+ rows tinted. |
+| `BlockedDates/Index.vue` | `/admin/blocked-dates` | Calendar date picker. Lists active blocked dates. Guards against blocking dates that have confirmed bookings. |
+| `Resources/Index.vue` | `/admin/resources` | Pricing override editor per facility. |
+| `Reports/Index.vue` | `/admin/reports` | Date range + preset selector. Period breakdown table. Per-facility breakdown. CSV / Excel export. |
+| `Admins/Index.vue` | `/admin/admins` | Super Admin only. List admins with role badges. Add new admin. Remove admins (cannot remove super_admin). |
+| `Profile/Index.vue` | `/admin/profile` | Account details panel. Change password form. |
 
 ---
 
-### Phase 4 — Admin Panel Enhancements
-*Addresses: GAP-07, GAP-08, GAP-09, GAP-11, GAP-12*
+## 8. Configuration Reference
 
-**Estimated effort:** 3–4 days
+### `config/booking.php`
 
-#### Step 4.1 — Admin weekly calendar view
+| Key | Env Variable | Description |
+|---|---|---|
+| `notify_extra_emails` | `BOOKING_NOTIFY_EXTRA_EMAILS` | Comma-separated extra email recipients for new booking alerts |
+| `bank.bank_name` | `BOOKING_BANK_NAME` | Bank name on confirmation page |
+| `bank.account_name` | `BOOKING_BANK_ACCOUNT_NAME` | Account holder name |
+| `bank.account_number` | `BOOKING_BANK_ACCOUNT_NUMBER` | Bank account number |
+| `bank.branch` | `BOOKING_BANK_BRANCH` | Branch name |
+| `whatsapp_number` | `BOOKING_WHATSAPP_NUMBER` | WhatsApp number for booker → admin receipt messages |
+| `support_phone` | `BOOKING_SUPPORT_PHONE` | Primary support phone (displayed in header + home page) |
+| `support_phone_2` | `BOOKING_SUPPORT_PHONE_2` | Secondary support phone |
+| `booking_window_months` | — | How many months ahead the public calendar allows booking (default: 3) |
+| `azwar_hall_chair_rate` | — | Per-chair fee in LKR for Azwar Hall (default: 10) |
+| `pricing.{slug}.{slot_type}` | — | Slot definitions: `type` (flat/hourly), `rate` (LKR), `label` |
 
-Create `Pages/Admin/Calendar/Index.vue`:
-- Week grid (Mon–Sun columns, time rows for slot-based facilities).
-- Fetch bookings for the selected week via a new API endpoint:
-  `GET /admin/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
-- Color-code by status: pending = yellow, confirmed = green, rejected/cancelled = grey.
-- Clicking a booking cell navigates to the booking detail page.
+### Required `.env` variables
 
-Add route: `GET /admin/calendar` → `Admin/CalendarController@index`.
-
-#### Step 4.2 — Block dates / holidays
-
-Create migration for `blocked_dates` table:
-```sql
-id, resource_id (FK, nullable — null = all resources), date (date), reason (string), created_by (FK users), timestamps
 ```
-Create `Admin/BlockedDateController` with `index`, `store`, `destroy`.
-Add routes under `/admin/blocked-dates`.
-Create `Pages/Admin/BlockedDates/Index.vue` — simple list + date picker form.
-Update `BookingService::unavailableDates()` to include blocked dates.
-Update `StoreBookingRequest` to reject dates that are blocked.
+APP_KEY=
+DB_HOST=
+DB_DATABASE=
+DB_USERNAME=
+DB_PASSWORD=
 
-#### Step 4.3 — Pricing management UI
+MAIL_MAILER=
+MAIL_HOST=
+MAIL_PORT=
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME=
 
-Add `pricing_overrides` — JSON column to `resources` table (stores slot-specific overrides).
-Create `Admin/ResourceController` with:
-- `edit(Resource)` — shows a form with current pricing.
-- `update(Resource)` — saves new prices.
-Add routes: `GET /admin/resources/{resource}/edit`, `PUT /admin/resources/{resource}`.
-Create `Pages/Admin/Resources/Edit.vue`.
-Update `PricingService` to read from `resource->pricing_overrides` with fallback to `config/booking.php`.
+BOOKING_BANK_NAME=
+BOOKING_BANK_ACCOUNT_NAME=
+BOOKING_BANK_ACCOUNT_NUMBER=
+BOOKING_BANK_BRANCH=
+BOOKING_WHATSAPP_NUMBER=
+BOOKING_SUPPORT_PHONE=
+BOOKING_SUPPORT_PHONE_2=
+BOOKING_NOTIFY_EXTRA_EMAILS=
 
-#### Step 4.4 — Dashboard "today's bookings" widget
-
-Update `Admin/DashboardController@index` to additionally pass:
-- `todayBookings` — bookings with at least one `BookingDate` equal to today.
-- `todayRevenue` — sum of confirmed bookings with today's dates.
-
-Update `Pages/Admin/Dashboard.vue` to render a "Today" section above the existing stats.
-
-#### Step 4.5 — Weekly report preset + PDF/Excel export
-
-Add weekly preset button to `Pages/Admin/Reports/Index.vue` (sets `from` = start of current week, `to` = end of current week).
-
-Add PDF export using `barryvdh/laravel-dompdf`:
+GOOGLE_CALENDAR_ID=
+GOOGLE_SERVICE_ACCOUNT_JSON=
 ```
-composer require barryvdh/laravel-dompdf
-```
-Add route: `GET /admin/reports/export/pdf` → streams a PDF invoice-style report.
-
-Add Excel export using `maatwebsite/excel`:
-```
-composer require maatwebsite/excel
-```
-Add route: `GET /admin/reports/export/excel` → streams XLSX file.
 
 ---
 
-### Phase 5 — Business Rule Enforcement
-*Addresses: GAP-14*
+## 9. Background Jobs & Scheduled Commands
 
-**Estimated effort:** 0.5 day
+### Queue jobs
 
-#### Step 5.1 — Automated 2-day pending alert
+| Job | Trigger | Action |
+|---|---|---|
+| `AddBookingToGoogleCalendar` | Booking confirmed | Creates Google Calendar event; stores `google_event_id` on booking |
+| `RemoveBookingFromGoogleCalendar` | Booking cancelled or rejected | Removes the Calendar event using `google_event_id` |
 
-Create Laravel scheduled command `app/Console/Commands/AlertOverduePendingBookings.php`:
-- Finds bookings where `status = pending` AND the earliest `BookingDate.date` is exactly 2 days from now.
-- Sends an email to all admins listing these bookings with a "confirm or cancel" reminder.
+Both jobs have `$tries = 3`. Google Calendar failures are caught — they do not block booking confirmation.
+
+### Artisan commands
+
+| Command | Schedule | Description |
+|---|---|---|
+| `bookings:alert-pending` | Daily at 08:00 | Emails admins about pending bookings whose earliest date is within 2 days |
 
 Register in `routes/console.php`:
 ```php
@@ -517,157 +376,33 @@ Schedule::command('bookings:alert-pending')->dailyAt('08:00');
 
 ---
 
-### Phase Completion Checklist
+## 10. Email Notifications
 
-| Phase | Key Deliverables | Gaps Closed |
+| Mailable | Recipients | Trigger |
 |---|---|---|
-| Phase 1 | NIC field, time slots, Azwar Hall, user receipt upload, rejected status | GAP-01, 02, 03, 04, 13 |
-| Phase 2 | Booker confirmation emails, WhatsApp stub | GAP-05, 10 |
-| Phase 3 | Google Calendar auto-sync | GAP-06 |
-| Phase 4 | Weekly calendar view, blocked dates, pricing UI, today's widget, weekly/PDF/Excel exports | GAP-07, 08, 09, 11, 12 |
-| Phase 5 | 2-day pending booking alert command | GAP-14 |
+| `NewBookingReceived` | All admin users + `notify_extra_emails` | New booking submitted |
+| `BookingConfirmed` | Booker (if email provided) | Admin confirms booking |
+| `BookingCancelled` | Booker (if email provided) | Admin cancels booking |
+| `BookingRejected` | Booker (if email provided) | Admin rejects booking |
+| `ReceiptUploaded` | All admin users | Booker uploads receipt via public upload page |
+| `PendingBookingAlert` | All admin users | Scheduled: bookings within 2 days still pending |
 
 ---
 
-## 6. Data Model Reference
+## 11. Deployment
 
-### Current Schema
+Deployment targets the production server at `/home/zahirabo/zahira-booking` via SSH.
 
-```
-users
-  id, name, email, password, remember_token, timestamps
+Steps run in a single SSH session:
+1. `git pull` — fetch latest commits
+2. `composer install --optimize-autoloader --no-dev` — install PHP dependencies
+3. `php artisan migrate --force` — run any new migrations
+4. `php artisan config:cache` — cache configuration
+5. `php artisan route:cache` — cache routes
+6. `php artisan view:cache` — cache Blade views
+7. `npm run build` — compile frontend assets
 
-resources
-  id, name, slug (unique), description, location, image_path,
-  price_per_day (decimal 10,2), is_active (bool), timestamps
-
-bookings
-  id, reference_no (unique), resource_id (FK),
-  full_name, mobile_number, purpose,
-  total_amount (decimal 10,2),
-  status (enum: pending|confirmed|cancelled),
-  receipt_path,
-  admin_notes,
-  confirmed_by (FK users), confirmed_at,
-  cancelled_by (FK users), cancelled_at, cancellation_reason,
-  timestamps
-
-booking_dates
-  id, booking_id (FK), resource_id (FK), date (date),
-  unit_price (decimal 10,2), timestamps
-  INDEX (resource_id, date)
-```
-
-### Planned Schema Additions (Phase 1)
-
-```
-bookings — new columns:
-  nic (string 20)
-  email (string 255, nullable)
-  slot_type (enum: full_day|daytime|night_4lights|night_2lights, nullable)
-  start_time (time, nullable)
-  end_time (time, nullable)
-  hours (smallint unsigned, nullable)
-  chair_count (smallint unsigned, nullable)
-  sound_system_requested (bool, default false)
-  rejected_by (FK users, nullable)
-  rejected_at (timestamp, nullable)
-  rejection_reason (text, nullable)
-  google_event_id (string, nullable)
-
-resources — new columns:
-  pricing_overrides (json, nullable)
-
-blocked_dates (new table)
-  id, resource_id (FK, nullable), date (date),
-  reason (string 255), created_by (FK users), timestamps
-```
-
----
-
-## 7. API / Route Reference
-
-### Current Routes
-
-| Method | URI | Controller | Notes |
-|---|---|---|---|
-| GET | `/` | `Public/HomeController@index` | Public |
-| GET | `/grounds/{slug}` | `Public/BookingController@show` | Public |
-| GET | `/grounds/{slug}/availability` | `Public/BookingController@availability` | JSON |
-| POST | `/grounds/{slug}/bookings` | `Public/BookingController@store` | Public |
-| GET | `/bookings/{ref}/confirmation` | `Public/BookingController@confirmation` | Public |
-| GET | `/admin/login` | `Auth/AuthenticatedSessionController@create` | Guest |
-| POST | `/admin/login` | `Auth/AuthenticatedSessionController@store` | Guest |
-| POST | `/admin/logout` | `Auth/AuthenticatedSessionController@destroy` | Auth |
-| GET | `/admin/dashboard` | `Admin/DashboardController@index` | Auth |
-| GET | `/admin/bookings` | `Admin/BookingController@index` | Auth |
-| GET | `/admin/bookings/{booking}` | `Admin/BookingController@show` | Auth |
-| POST | `/admin/bookings/{booking}/receipt` | `Admin/BookingController@uploadReceipt` | Auth |
-| POST | `/admin/bookings/{booking}/confirm` | `Admin/BookingController@confirm` | Auth |
-| POST | `/admin/bookings/{booking}/cancel` | `Admin/BookingController@cancel` | Auth |
-| GET | `/admin/reports` | `Admin/ReportController@index` | Auth |
-| GET | `/admin/reports/export` | `Admin/ReportController@export` | Auth |
-| GET | `/admin/admins` | `Admin/AdminUserController@index` | Auth |
-| POST | `/admin/admins` | `Admin/AdminUserController@store` | Auth |
-| DELETE | `/admin/admins/{user}` | `Admin/AdminUserController@destroy` | Auth |
-
-### Planned New Routes (Phases 1–4)
-
-| Method | URI | Controller | Phase |
-|---|---|---|---|
-| POST | `/admin/bookings/{booking}/reject` | `Admin/BookingController@reject` | 1 |
-| GET | `/admin/calendar` | `Admin/CalendarController@index` | 4 |
-| GET | `/admin/blocked-dates` | `Admin/BlockedDateController@index` | 4 |
-| POST | `/admin/blocked-dates` | `Admin/BlockedDateController@store` | 4 |
-| DELETE | `/admin/blocked-dates/{id}` | `Admin/BlockedDateController@destroy` | 4 |
-| GET | `/admin/resources/{resource}/edit` | `Admin/ResourceController@edit` | 4 |
-| PUT | `/admin/resources/{resource}` | `Admin/ResourceController@update` | 4 |
-| GET | `/admin/reports/export/pdf` | `Admin/ReportController@exportPdf` | 4 |
-| GET | `/admin/reports/export/excel` | `Admin/ReportController@exportExcel` | 4 |
-
----
-
-## 8. Configuration Reference
-
-### `config/booking.php`
-
-| Key | Env Variable | Default | Description |
-|---|---|---|---|
-| `notify_extra_emails` | `BOOKING_NOTIFY_EXTRA_EMAILS` | `[]` | Comma-separated extra email recipients |
-| `bank.bank_name` | — | Configured in file | Bank name shown on confirmation |
-| `bank.account_name` | — | — | Account holder name |
-| `bank.account_number` | — | — | Bank account number |
-| `bank.branch` | — | — | Branch name |
-| `whatsapp_number` | — | — | Admin WhatsApp for manual receipt follow-up |
-| `booking_window_months` | — | `3` | How many months ahead users can book |
-
-### Planned additions to `config/booking.php`
-
-```php
-'pricing' => [
-    'zahira-green' => [
-        'daytime'       => ['type' => 'flat',   'rate' => 6000],
-        'night_4lights' => ['type' => 'hourly',  'rate' => 3500],
-        'night_2lights' => ['type' => 'hourly',  'rate' => 2000],
-    ],
-    'azwar-hall' => [
-        'hall_rent'  => 10000,
-        'chair_rate' => 10,
-    ],
-],
-```
-
-### Required Environment Variables
-
-| Variable | Description |
-|---|---|
-| `APP_KEY` | Laravel application key |
-| `DB_*` | MySQL connection settings |
-| `MAIL_*` | SMTP credentials |
-| `BOOKING_NOTIFY_EXTRA_EMAILS` | Comma-separated extra admin emails |
-| `GOOGLE_CALENDAR_ID` | Google Calendar ID for sync (Phase 3) |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Path to Google service account credentials JSON (Phase 3) |
-| `TWILIO_*` | Twilio credentials for WhatsApp (Phase 2, optional) |
+The `/deploy` skill in Claude Code automates this via PuTTY `plink`.
 
 ---
 
