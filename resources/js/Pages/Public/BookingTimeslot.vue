@@ -13,6 +13,7 @@ const props = defineProps({
     initialPhone:           { type: String,  default: '' },
     initialEmail:           { type: String,  default: '' },
     whatsappNumber:         { type: String,  default: '' },
+    paymentDeadlineHours:   { type: Number,  default: 3 },
 });
 
 // ── Resource helpers ─────────────────────────────────────────────────────────
@@ -221,8 +222,8 @@ function openReview() {
     showReview.value    = true;
     agreedToTerms.value = false;
 
-    // Deadline = now + 3 hours, formatted yyyy-dd-mm HH:mm AM/PM
-    const d    = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    // Deadline = now + payment deadline hours, formatted yyyy-dd-mm HH:mm AM/PM
+    const d    = new Date(Date.now() + props.paymentDeadlineHours * 60 * 60 * 1000);
     const yyyy = d.getFullYear();
     const dd   = String(d.getDate()).padStart(2, '0');
     const mm   = String(d.getMonth() + 1).padStart(2, '0');

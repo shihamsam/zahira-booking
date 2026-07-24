@@ -52,6 +52,7 @@ class BookingController extends Controller
             'initialPhone'           => $request->query('phone', ''),
             'initialEmail'           => $request->query('email', ''),
             'whatsappNumber'         => config('booking.whatsapp_number'),
+            'paymentDeadlineHours'   => config('booking.payment_deadline_hours'),
         ]);
     }
 

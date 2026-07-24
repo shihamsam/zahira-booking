@@ -26,6 +26,11 @@ return [
     // How many months ahead the public calendar allows booking.
     'booking_window_months' => 3,
 
+    // Hours a pending booking has to get its receipt confirmed before the
+    // `bookings:auto-cancel-overdue` command cancels it and frees the slot.
+    // Set to 0 to disable auto-cancellation.
+    'payment_deadline_hours' => (int) env('BOOKING_PAYMENT_DEADLINE_HOURS', 3),
+
     // Per-resource pricing definitions keyed by resource slug.
     // Each slot entry has a 'type' ('flat' or 'hourly') and a 'rate' in LKR.
     // Flat slots: rate applies once per selected date.
