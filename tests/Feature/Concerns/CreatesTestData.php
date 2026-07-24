@@ -18,6 +18,14 @@ trait CreatesTestData
         ], $attrs));
     }
 
+    protected function superAdminUser(array $attrs = []): User
+    {
+        return $this->adminUser(array_merge([
+            'email' => 'superadmin@zahirags.lk',
+            'role'  => 'super_admin',
+        ], $attrs));
+    }
+
     protected function zahiraGreen(array $attrs = []): Resource
     {
         return Resource::create(array_merge([

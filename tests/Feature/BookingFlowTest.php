@@ -116,7 +116,8 @@ class BookingFlowTest extends TestCase
     {
         $response = $this->post("/facilities/{$this->resource->slug}/bookings", []);
 
-        $response->assertSessionHasErrors(['full_name', 'mobile_number', 'nic', 'slot_type', 'dates']);
+        // NIC is intentionally optional (nullable) — see SEC-07.
+        $response->assertSessionHasErrors(['full_name', 'mobile_number', 'slot_type', 'dates']);
     }
 
     public function test_night_slot_requires_times_and_hours(): void
@@ -147,10 +148,12 @@ class BookingFlowTest extends TestCase
             'start_time'    => '18:30',
             'end_time'      => '22:30',
             'hours'         => 4,
+            'slot_hours'    => [18, 19, 20, 21],
             'dates'         => [$date],
         ]);
 
         $booking = Booking::first();
+        $this->assertNotNull($booking, 'Booking was not created.');
         // 4 lights = Rs. 3,500/hr × 4 hrs = Rs. 14,000
         $this->assertEquals('14000.00', $booking->total_amount);
     }
@@ -194,9 +197,11 @@ class BookingFlowTest extends TestCase
             'start_time'    => '18:30',
             'end_time'      => '22:30',
             'hours'         => 4,
+            'slot_hours'    => [18, 19, 20, 21],
             'dates'         => [$date],
         ]);
 
+        $response->assertSessionDoesntHaveErrors();
         $this->assertDatabaseCount('bookings', 2);
     }
 
