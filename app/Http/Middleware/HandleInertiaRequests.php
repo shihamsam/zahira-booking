@@ -29,7 +29,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
-            'supportPhone' => config('booking.support_phone'),
+            'supportPhone'  => config('booking.support_phone'),
+            'supportPhone2' => config('booking.support_phone_2'),
         ];
     }
 }
