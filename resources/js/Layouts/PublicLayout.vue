@@ -38,9 +38,6 @@ const displayPhone2 = computed(() => formatPhone(supportPhone2.value));
                     <Link href="/upload-receipt" class="text-xs sm:text-sm text-chalk-50/70 hover:text-chalk-50 font-medium">
                         Upload Receipt
                     </Link>
-                    <Link href="/admin/login" class="text-xs sm:text-sm text-chalk-50/70 hover:text-chalk-50 font-medium">
-                        Admin
-                    </Link>
                 </div>
             </div>
         </header>

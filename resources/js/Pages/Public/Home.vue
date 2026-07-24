@@ -285,7 +285,7 @@ function proceed() {
                 </div>
 
                 <!-- CTA -->
-                <div class="mt-4 pt-2">
+                <div class="mt-2">
                     <p
                         v-if="selectedId && !isValid"
                         class="text-[11px] text-ink-700/60 mb-2"
@@ -307,14 +307,29 @@ function proceed() {
                         Choose Your Time Slot &rarr;
                     </button>
 
-                    <!-- Utility links -->
-                    <div class="flex items-center justify-center gap-4 mt-5 pb-4 lg:pb-0">
-                        <a href="/upload-receipt" class="text-[11px] font-mono text-ink-700/50 hover:text-ink-700/70 uppercase tracking-widest transition-colors">
-                            Upload Receipt
-                        </a>
-                        <span class="text-ink-700/30 text-[11px]">&bull;</span>
-                        <a href="/admin/login" class="text-[11px] font-mono text-ink-700/50 hover:text-ink-700/70 uppercase tracking-widest transition-colors">
-                            Admin
+                    <!-- Upload receipt banner -->
+                    <div class="mt-4 pb-4 lg:pb-0">
+                        <a
+                            href="/upload-receipt"
+                            class="group flex items-center gap-4 rounded-card border border-chalk-200 bg-chalk-50 px-4 py-3 hover:border-pitch-400/50 hover:bg-white transition-all duration-150"
+                        >
+                            <!-- Icon -->
+                            <div class="flex-shrink-0 w-9 h-9 rounded-full bg-pitch-50 border border-pitch-200 flex items-center justify-center group-hover:bg-pitch-100 transition-colors">
+                                <svg class="w-4 h-4 text-pitch-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+
+                            <!-- Text -->
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[11px] font-semibold text-pitch-900 leading-none mb-0.5">Already have a booking?</p>
+                                <p class="text-[11px] text-ink-700/55 leading-snug">Upload your payment receipt to complete your booking confirmation.</p>
+                            </div>
+
+                            <!-- Arrow -->
+                            <svg class="w-4 h-4 text-ink-700/30 group-hover:text-pitch-600 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                            </svg>
                         </a>
                     </div>
                 </div>
