@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\BlockedDateController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\CalendarController;
@@ -80,4 +81,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/admins', [AdminUserController::class, 'index'])->name('admins.index');
     Route::post('/admins', [AdminUserController::class, 'store'])->name('admins.store');
     Route::delete('/admins/{user}', [AdminUserController::class, 'destroy'])->name('admins.destroy');
+
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 });
