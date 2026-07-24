@@ -56,6 +56,13 @@ function logout() {
                 </Link>
             </nav>
             <div class="px-3 py-4 border-t border-chalk-50/10 space-y-1">
+                <a
+                    v-if="isSuperAdmin"
+                    href="/log-viewer"
+                    class="block px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70 hover:bg-chalk-50/5 hover:text-chalk-50"
+                >
+                    Logs
+                </a>
                 <Link href="/" class="block px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70 hover:bg-chalk-50/5 hover:text-chalk-50">
                     ← View site
                 </Link>
@@ -90,6 +97,13 @@ function logout() {
                 <Link href="/admin/profile" class="block px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70" @click="mobileNavOpen = false">
                     My Account
                 </Link>
+                <a
+                    v-if="isSuperAdmin"
+                    href="/log-viewer"
+                    class="block px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70"
+                >
+                    Logs
+                </a>
                 <button @click="logout" class="w-full text-left px-3 py-2.5 rounded-md text-sm font-medium text-chalk-50/70">
                     Log out
                 </button>
