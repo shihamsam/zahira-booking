@@ -533,6 +533,10 @@ const canReview = computed(() => {
                         To secure your booking, full / partial payment must be made within the given time.
                         Bookings without payment will be automatically cancelled.
                     </p>
+                    <p class="mt-2 pt-2 border-t border-floodlight-500/20">
+                        உங்கள் முன்பதிவை உறுதிசெய்ய, குறிப்பிட்ட நேரத்திற்குள் முழு / பகுதி கட்டணம் செலுத்தப்பட வேண்டும்.
+                        கட்டணம் செலுத்தாத முன்பதிவுகள் தானாகவே ரத்து செய்யப்படும்.
+                    </p>
                 </div>
 
                 <div class="flex items-start gap-3 mb-5">
@@ -542,6 +546,11 @@ const canReview = computed(() => {
                         If I do not make the payment by
                         <strong class="font-semibold text-pitch-900">{{ paymentDeadline }}</strong>,
                         I agree to the cancellation of my booking.
+                        <span class="block mt-1.5 pt-1.5 border-t border-chalk-200">
+                            கட்டணம் செலுத்தியப் பின்னரே எனது முன்பதிவு உறுதிப்படுத்தப்படும் என்பதை நான் படித்து புரிந்துகொண்டேன்.
+                            <strong class="font-semibold text-pitch-900">{{ paymentDeadline }}</strong>
+                            க்குள் நான் கட்டணத்தைச் செலுத்தவில்லை எனில், எனது முன்பதிவு ரத்து செய்யப்படுவதை நான் ஒப்புக்கொள்கிறேன்.
+                        </span>
                     </label>
                 </div>
 
